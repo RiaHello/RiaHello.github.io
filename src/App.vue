@@ -1,0 +1,1359 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+import HomeMenu from './components/Home_Menu.vue';
+import MatrixRain from './components/MatrixRain.vue';
+import PageTransition from './components/PageTransition.vue';
+
+const heroVisible = ref(false);
+const showContact = ref(false);
+const showResume = ref(false);
+const showTransition = ref(false);
+const transitionProgress = ref(0);
+
+onMounted(() => {
+  heroVisible.value = true;
+});
+
+// 生成随机时间（毫秒）
+const randomDuration = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+// 页面切换动画 - 三阶段：淡出 -> 扫描 -> 淡入
+const playTransition = (callback: () => void) => {
+  showTransition.value = true;
+  transitionProgress.value = 0;
+
+  // 固定时间
+  const fadeOutDuration = 300;    // 淡出 300ms
+  const fadeInDuration = 300;     // 淡入 300ms
+
+  // 扫描阶段分段随机时间（总扫描时间控制在 1100-2000ms，整体 1.7-2.6秒）
+  const scanSegment1 = randomDuration(250, 400);   // 0-30%
+  const scanSegment2 = randomDuration(300, 500);   // 30-60%
+  const scanSegment3 = randomDuration(300, 600);   // 60-89%
+  const scanSegment4 = randomDuration(250, 400);   // 89-100%（快速完成）
+
+  const scanDuration = scanSegment1 + scanSegment2 + scanSegment3 + scanSegment4;
+  const totalDuration = fadeOutDuration + scanDuration + fadeInDuration;
+
+  console.log('Transition timing:', {
+    fadeOut: fadeOutDuration,
+    scan: scanDuration,
+    fadeIn: fadeInDuration,
+    total: totalDuration
+  });
+
+  const startTime = performance.now();
+
+  // 计算当前进度对应的阶段和细分进度
+  const calculateProgress = (elapsed: number) => {
+    const totalProgress = Math.min(elapsed / totalDuration, 1);
+
+    if (totalProgress < fadeOutDuration / totalDuration) {
+      // 淡出阶段
+      const phaseProgress = elapsed / fadeOutDuration;
+      return { phase: 'fadeOut' as const, totalProgress, phaseProgress };
+    } else if (totalProgress < (fadeOutDuration + scanDuration) / totalDuration) {
+      // 扫描阶段
+      const scanElapsed = elapsed - fadeOutDuration;
+      const scanProgress = Math.min(scanElapsed / scanDuration, 1);
+
+      // 计算扫描细分阶段
+      let scanPhase: 'segment1' | 'segment2' | 'segment3' | 'segment4';
+      let scanPhaseProgress: number;
+
+      if (scanElapsed < scanSegment1) {
+        scanPhase = 'segment1';
+        scanPhaseProgress = scanElapsed / scanSegment1;
+      } else if (scanElapsed < scanSegment1 + scanSegment2) {
+        scanPhase = 'segment2';
+        scanPhaseProgress = (scanElapsed - scanSegment1) / scanSegment2;
+      } else if (scanElapsed < scanSegment1 + scanSegment2 + scanSegment3) {
+        scanPhase = 'segment3';
+        scanPhaseProgress = (scanElapsed - scanSegment1 - scanSegment2) / scanSegment3;
+      } else {
+        scanPhase = 'segment4';
+        scanPhaseProgress = (scanElapsed - scanSegment1 - scanSegment2 - scanSegment3) / scanSegment4;
+      }
+
+      return { phase: 'scan' as const, totalProgress, phaseProgress: scanProgress, scanPhase, scanPhaseProgress };
+    } else {
+      // 淡入阶段
+      const fadeInElapsed = elapsed - fadeOutDuration - scanDuration;
+      const phaseProgress = Math.min(fadeInElapsed / fadeInDuration, 1);
+      return { phase: 'fadeIn' as const, totalProgress, phaseProgress };
+    }
+  };
+
+  const animate = (currentTime: number) => {
+    const elapsed = currentTime - startTime;
+    const state = calculateProgress(elapsed);
+
+    transitionProgress.value = state.totalProgress;
+
+    if (state.totalProgress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // 动画完全结束，隐藏过渡层
+      setTimeout(() => {
+        showTransition.value = false;
+      }, 100);
+    }
+  };
+
+  // 在扫描阶段约75%时切换页面内容
+  const switchTime = fadeOutDuration + scanSegment1 + scanSegment2 + scanSegment3 * 0.6;
+  setTimeout(() => {
+    callback();
+  }, switchTime);
+
+  requestAnimationFrame(animate);
+};
+
+const goToContact = () => {
+  playTransition(() => {
+    showContact.value = true;
+    showResume.value = false;
+  });
+};
+
+const goToResume = () => {
+  playTransition(() => {
+    showResume.value = true;
+    showContact.value = false;
+  });
+};
+
+const goBack = () => {
+  playTransition(() => {
+    showContact.value = false;
+    showResume.value = false;
+  });
+};
+
+// RIA 悬停状态
+const isRiaHovered = ref(false);
+
+// Toast 状态
+const toastVisible = ref(false);
+const toastMessage = ref('');
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+const showToastNotification = (message: string) => {
+  if (toastTimer) clearTimeout(toastTimer);
+  toastMessage.value = message;
+  toastVisible.value = true;
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false;
+  }, 2000);
+};
+
+// 复制到剪贴板功能
+const copyToClipboard = (text: string, label: string) => {
+  navigator.clipboard.writeText(text).then(() => {
+    console.log(`${label} copied: ${text}`);
+    showToastNotification(`已复制 ${label}: ${text}`);
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+    showToastNotification('复制失败，请重试');
+  });
+};
+</script>
+
+<template>
+  <div class="page">
+    <!-- 页面过渡动画 -->
+    <PageTransition
+      v-if="showTransition"
+      :show="showTransition"
+      :progress="transitionProgress"
+    />
+
+    <HomeMenu 
+      :active-section="showContact ? 'contact' : (showResume ? 'resume' : 'home')" 
+      @go-home="goBack" 
+      @go-contact="goToContact"
+      @go-resume="goToResume"
+    />
+
+    <!-- 数字流背景 -->
+    <MatrixRain />
+
+    <!-- 几何装饰元素 -->
+    <div class="decorations" aria-hidden="true">
+      <div class="deco-square deco-1"></div>
+      <div class="deco-square deco-2"></div>
+      <div class="deco-square deco-3"></div>
+      <div class="deco-square deco-4"></div>
+      <div class="deco-square deco-5"></div>
+      <div class="deco-dot deco-dot-1"></div>
+      <div class="deco-dot deco-dot-2"></div>
+    </div>
+
+    <!-- 背景网格 -->
+    <div class="bg-grid" aria-hidden="true">
+      <div class="grid-line" v-for="i in 20" :key="i"></div>
+    </div>
+
+    <!-- Logo -->
+    <div class="logo-container" :class="{ 'logo-visible': heroVisible }">
+      <div class="logo-icon">
+        <span class="logo-letter">R</span>
+      </div>
+      <span class="logo-name">RIA</span>
+    </div>
+
+    <!-- 主页内容 -->
+    <div v-if="!showContact && !showResume" class="hero" :class="{ 'hero-visible': heroVisible }">
+      <!-- 第一行: HI, -->
+      <div class="hero-line hero-line--top" aria-label="HI,">
+        <span
+          v-for="(char, i) in ['H', 'I', ',']"
+          :key="i"
+          class="hero-letter cursor-target text-white"
+          :style="{ animationDelay: `${i * 0.08}s` }"
+        >{{ char }}</span>
+      </div>
+
+      <!-- 第二行: HERE IS RIA -->
+      <div class="hero-line hero-line--bottom" aria-label="HERE IS RIA">
+        <span
+          v-for="(char, i) in ['H', 'E', 'R', 'E', '\u00A0', 'I', 'S', '\u00A0']"
+          :key="i"
+          class="hero-letter cursor-target text-white"
+          :style="{ animationDelay: `${0.3 + i * 0.06}s` }"
+        >{{ char }}</span>
+        <!-- RIA 整体悬停区域 -->
+        <span
+          class="ria-group cursor-target"
+          @mouseenter="isRiaHovered = true"
+          @mouseleave="isRiaHovered = false"
+          :class="{ 'ria-hovered': isRiaHovered }"
+        >
+          <span
+            v-for="(char, i) in ['R', 'I', 'A']"
+            :key="i"
+            class="hero-letter ria-letter"
+            :class="'text-lime'"
+            :style="{ animationDelay: `${0.3 + (8 + i) * 0.06}s` }"
+          >{{ char }}</span>
+        </span>
+      </div>
+
+      <!-- 副标题 -->
+      <div class="subtitle" :class="{ 'subtitle-visible': isRiaHovered }">
+        <p class="subtitle-tags">极客 · 产品 · 项目思维</p>
+        <p class="subtitle-text">你好~这里是石耳，也叫RIA</p>
+      </div>
+
+      <!-- CTA 按钮组 -->
+      <div class="cta-group">
+        <button class="cta-btn cursor-target" @click="goToResume">
+          <span>关于我</span>
+          <svg class="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+        
+        <button class="cta-btn cta-btn-outline cursor-target" @click="goToContact">
+          <span>联系我</span>
+          <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M19 12l-7 7-7-7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 简历页面 (关于我) -->
+    <div v-else-if="showResume" class="resume-page" :class="{ 'resume-visible': showResume }">
+      <div class="resume-container">
+        <div class="resume-header">
+          <h2 class="resume-title">关于我</h2>
+          <p class="resume-subtitle">About Me</p>
+        </div>
+        
+        <div class="resume-content">
+          <div class="resume-section">
+            <h3 class="section-title">个人简介</h3>
+            <p class="section-text">
+              你好，我是陈科瑾（Ria）。<br>
+              具备 <strong>AI 大模型应用</strong> 与 <strong>全栈开发</strong> 能力的 <strong>AI 产品经理</strong>。<br>
+              <br>
+              致力于将前沿的 AI 技术（Transformers, LangChain, RAG）转化为实际落地的商业价值。
+              拥有扎实的工程底座，融合 <strong>Java (Spring Boot)</strong> 与 <strong>Python</strong> 双栈技术，
+              结合 <strong>Docker/K8s</strong> 容器化部署经验，构建高效、可扩展的智能化解决方案。<br>
+              <br>
+              热衷于探索 <strong>Multi-Agent</strong> 协作与 <strong>GraphRAG</strong> 知识图谱增强生成技术，
+              推动产品从 0 到 1 的创新与迭代。
+            </p>
+          </div>
+
+          <div class="resume-grid">
+            <div class="resume-card">
+              <h4 class="card-title">AI 技术栈</h4>
+              <ul class="skill-list">
+                <li>LangChain / Dify</li>
+                <li>RAG / GraphRAG</li>
+                <li>LoRA / QLoRA / PEFT</li>
+                <li>vLLM / DeepSpeed</li>
+                <li>PyTorch / Transformers</li>
+                <li>Prompt Engineering</li>
+              </ul>
+            </div>
+            
+            <div class="resume-card">
+              <h4 class="card-title">工程技术栈</h4>
+              <ul class="skill-list">
+                <li>Java / Spring Boot</li>
+                <li>Python / FastAPI</li>
+                <li>Vue.js / TypeScript</li>
+                <li>Docker / K8s</li>
+                <li>MySQL / Redis / Milvus</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="resume-section">
+            <h3 class="section-title">工作经历</h3>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">2024.12 - 至今</span>
+                  <h4 class="timeline-role">全栈开发工程师 @ 网新 (Insigma)</h4>
+                  <p class="timeline-desc">
+                    负责企业级 AI 应用的全栈开发与架构设计。<br>
+                    • 核心参与研发并推行 <strong>SDD (大模型开发规范)</strong>，通过标准化 Prompt 接口与模块化 Agent 设计重构研发流程。该规范的落地极大提升了代码生成质量与开发效率，推动研发中心实现了显著的人效优化与组织结构精简。<br>
+                    • 采用 <strong>Spring Boot + Vue</strong> 架构，集成 <strong>ChatGLM/DeepSeek</strong> 模型构建 RAG 知识库系统，实现业务流与 AI 能力的无缝融合。<br>
+                    • 实施 <strong>LoRA (r=8)</strong> 微调技术，针对垂直领域业务数据进行模型适配，解决通用模型在特定场景下的幻觉问题。
+                  </p>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">2023.10 - 2024.11</span>
+                  <h4 class="timeline-role">算法工程师 @ 智谱 AI (Zhipu AI)</h4>
+                  <p class="timeline-desc">
+                    核心参与 <strong>Critic (思维链评判模型)</strong> 项目研发，专注于提升大模型的逻辑推理与自我纠错能力。<br>
+                    • 设计并构建高质量 <strong>Chain of Thought (CoT)</strong> 训练数据集，通过 <strong>Step-by-Step</strong> 推理路径增强模型在复杂数学与代码任务中的表现。<br>
+                    • 参与 <strong>Process Reward Model (PRM)</strong> 的训练与验证，优化 <strong>RLHF (PPO)</strong> 算法中的奖励机制，使模型具备细粒度的逻辑验证与 <strong>Self-Correction (自我修正)</strong> 能力。<br>
+                    • 负责基座模型在 <strong>Reasoning</strong> 场景下的 <strong>SFT</strong> 策略调优，结合 <strong>GraphRAG</strong> 技术解决长上下文推理中的幻觉问题，显著提升了模型在 <strong>GSM8K/HumanEval</strong> 等评测集上的核心指标。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 联系我页面 -->
+    <div v-else class="about-page" :class="{ 'about-visible': showContact }">
+      <div class="about-content">
+        <div class="avatar-container">
+          <div class="avatar-wrapper">
+            <img src="./assets/石耳的真人照放大版.jpg" alt="石耳的头像" class="avatar" />
+          </div>
+          <div class="avatar-glow"></div>
+        </div>
+
+        <div class="about-info">
+          <p class="about-name">石耳</p>
+          <p class="about-role">极客 · 产品 · 项目思维</p>
+
+          <div class="about-divider"></div>
+
+          <p class="about-desc">
+            热爱技术与设计的创造者，专注于打造有温度的数字产品。
+            相信好的产品是技术与艺术的完美结合。
+          </p>
+        </div>
+
+        <h2 class="about-title">Coffee Chat</h2>
+
+        <div class="contact-section">
+          <div class="contact-links">
+            <div 
+              class="contact-link cursor-target" 
+              @click="copyToClipboard('rudrakshaishere@gmail.com', 'Email')"
+              data-tooltip="rudrakshaishere@gmail.com"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              <span>Email</span>
+            </div>
+            <div 
+              class="contact-link cursor-target" 
+              @click="copyToClipboard('https://github.com/RiaHello', 'GitHub')"
+              data-tooltip="https://github.com/RiaHello"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+              </svg>
+              <span>GitHub</span>
+            </div>
+            <div 
+              class="contact-link cursor-target" 
+              @click="copyToClipboard('Ria_is_here', '微信号')"
+              data-tooltip="微信号：Ria_is_here"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+              </svg>
+              <span>微信</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 复制提示 Toast -->
+    <div class="toast-notification" :class="{ 'toast-visible': toastVisible }">
+      {{ toastMessage }}
+    </div>
+
+    <!-- 左下角滚动提示 -->
+    <div v-if="!showContact && !showResume" class="scroll-hint" aria-hidden="true">
+      <span class="scroll-text">SCROLL</span>
+      <div class="scroll-line"></div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.page {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #ffffff;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  cursor: none;
+}
+
+/* 背景网格 */
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.03;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 5%;
+}
+
+.grid-line {
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, #b7ff3b, transparent);
+}
+
+/* 几何装饰元素 */
+.decorations {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.deco-square {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #b7ff3b;
+  transform: rotate(45deg);
+}
+
+.deco-1 {
+  top: 25%;
+  left: 8%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.deco-2 {
+  top: 20%;
+  right: 15%;
+  width: 8px;
+  height: 8px;
+  animation: float 8s ease-in-out infinite 1s;
+}
+
+.deco-3 {
+  bottom: 35%;
+  left: 12%;
+  width: 10px;
+  height: 10px;
+  animation: float 7s ease-in-out infinite 0.5s;
+}
+
+.deco-4 {
+  top: 40%;
+  right: 8%;
+  width: 6px;
+  height: 6px;
+  animation: float 9s ease-in-out infinite 2s;
+}
+
+.deco-5 {
+  bottom: 25%;
+  right: 20%;
+  animation: float 5s ease-in-out infinite 1.5s;
+}
+
+.deco-dot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #b7ff3b;
+  border-radius: 50%;
+}
+
+.deco-dot-1 {
+  top: 30%;
+  right: 25%;
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.deco-dot-2 {
+  bottom: 40%;
+  left: 20%;
+  animation: pulse 4s ease-in-out infinite 1s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(45deg); }
+  50% { transform: translateY(-20px) rotate(45deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+
+/* Logo */
+.logo-container {
+  position: fixed;
+  top: 32px;
+  left: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.logo-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: #b7ff3b;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-letter {
+  font-size: 22px;
+  font-weight: 900;
+  color: #0a0a0a;
+}
+
+.logo-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #ffffff;
+}
+
+/* Hero 区域 */
+.hero {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 100%;
+  z-index: 10;
+  padding: 0 20px;
+  pointer-events: none;
+}
+
+.hero > * {
+  pointer-events: auto;
+}
+
+.hero-line {
+  margin: 0;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero-line--top {
+  font-size: clamp(56px, 10vw, 140px);
+  margin-bottom: 0.05em;
+}
+
+.hero-line--bottom {
+  font-size: clamp(48px, 9vw, 120px);
+}
+
+.hero-letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: letterIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.hero-visible .hero-letter {
+  animation-play-state: running;
+}
+
+@keyframes letterIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 白色文字 - 3D效果 */
+.text-white {
+  color: #ffffff;
+  text-shadow:
+    1px 1px 0 rgba(255,255,255,0.1),
+    2px 2px 0 rgba(0,0,0,0.3),
+    3px 3px 0 rgba(0,0,0,0.2),
+    4px 4px 0 rgba(0,0,0,0.1),
+    0 0 40px rgba(255,255,255,0.1);
+}
+
+/* 主标题 - 简洁活力阴影 */
+.hero-line {
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.4));
+}
+
+/* 白色文字 - 增强3D效果 */
+.text-white {
+  color: #ffffff;
+  text-shadow:
+    1px 1px 0 rgba(255,255,255,0.15),
+    2px 2px 0 rgba(0,0,0,0.3),
+    3px 3px 0 rgba(0,0,0,0.2),
+    4px 4px 0 rgba(0,0,0,0.1),
+    0 0 30px rgba(255,255,255,0.08),
+    0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* 荧光绿文字 - 3D立体效果 */
+.text-lime {
+  color: #b7ff3b;
+  text-shadow:
+    1px 1px 0 #8bc31a,
+    2px 2px 0 #6fa314,
+    3px 3px 0 #5a850f,
+    4px 4px 0 #45680b,
+    5px 5px 0 #304a08,
+    6px 6px 0 #1a2d04,
+    8px 8px 20px rgba(0,0,0,0.5),
+    0 0 60px rgba(183,255,59,0.3),
+    0 0 100px rgba(183,255,59,0.1);
+}
+
+/* RIA 整体悬停效果 */
+.ria-group {
+  display: inline-flex;
+  cursor: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ria-group:hover,
+.ria-hovered {
+  transform: scale(1.05);
+}
+
+.ria-letter {
+  display: inline-block;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ria-group:hover .ria-letter,
+.ria-hovered .ria-letter {
+  text-shadow:
+    1px 1px 0 #8bc31a,
+    2px 2px 0 #6fa314,
+    3px 3px 0 #5a850f,
+    4px 4px 0 #45680b,
+    5px 5px 0 #304a08,
+    6px 6px 0 #1a2d04,
+    8px 8px 20px rgba(0,0,0,0.5),
+    0 0 80px rgba(183,255,59,0.5),
+    0 0 120px rgba(183,255,59,0.3);
+}
+
+/* 副标题 - 简洁极客风 */
+.subtitle {
+  margin-top: 3rem;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.subtitle-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.subtitle-tags {
+  font-size: 0.9rem;
+  color: #b7ff3b;
+  letter-spacing: 0.3em;
+  font-weight: 600;
+  text-shadow:
+    0 0 10px rgba(183, 255, 59, 0.4),
+    0 0 20px rgba(183, 255, 59, 0.2);
+}
+
+.subtitle-text {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+}
+
+.subtitle-text::before {
+  content: '>';
+  color: #b7ff3b;
+  margin-right: 0.5rem;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* CTA 按钮组 */
+.cta-group {
+  margin-top: 2.5rem;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeInUp 0.8s ease-out 1.4s forwards;
+}
+
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 2rem;
+  background: #b7ff3b;
+  border: 1px solid #b7ff3b;
+  border-radius: 50px;
+  color: #0a0a0a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+  opacity: 0.2;
+}
+
+.cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(183,255,59,0.3);
+}
+
+.cta-btn:hover::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.cta-btn-outline {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.cta-btn-outline:hover {
+  border-color: #b7ff3b;
+  color: #b7ff3b;
+  background: rgba(183,255,59,0.1);
+}
+
+.arrow-right, .arrow-down {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease;
+}
+
+.cta-btn:hover .arrow-right {
+  transform: translateX(3px);
+}
+
+.cta-btn:hover .arrow-down {
+  transform: translateY(3px);
+}
+
+/* 简历页面样式 */
+.resume-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  overflow-y: auto;
+  padding: 80px 20px 40px;
+  opacity: 0;
+  animation: aboutIn 0.5s ease-out forwards;
+  scrollbar-width: none; /* Firefox */
+}
+
+.resume-page::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.resume-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+}
+
+.resume-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.resume-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 20px rgba(183, 255, 59, 0.3);
+}
+
+.resume-subtitle {
+  font-size: 1rem;
+  color: #b7ff3b;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.resume-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.resume-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.resume-section:hover {
+  border-color: rgba(183, 255, 59, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.section-title {
+  font-size: 1.2rem;
+  color: #b7ff3b;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: #b7ff3b;
+  border-radius: 2px;
+}
+
+.section-text {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.resume-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.resume-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.resume-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(183, 255, 59, 0.3);
+}
+
+.card-title {
+  font-size: 1.1rem;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.8rem;
+}
+
+.skill-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.skill-list li {
+  background: rgba(183, 255, 59, 0.1);
+  color: #b7ff3b;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  border: 1px solid rgba(183, 255, 59, 0.2);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  position: relative;
+  padding-left: 20px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.timeline-item {
+  position: relative;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -24px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  background: #b7ff3b;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(183, 255, 59, 0.5);
+}
+
+.timeline-date {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.timeline-role {
+  font-size: 1.1rem;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-desc {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+/* 关于我页面 */
+.about-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 40px 40px;
+  opacity: 0;
+  animation: aboutIn 0.5s ease-out forwards;
+}
+
+@keyframes aboutIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.about-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.avatar-container {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 2rem;
+}
+
+.avatar-wrapper {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 3px solid #b7ff3b;
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+}
+
+.avatar {
+  width: 180px;
+  height: 250px;
+  object-fit: cover;
+  position: absolute;
+  left: 0;
+  top: -77px;
+}
+
+.avatar-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(183,255,59,0.3) 0%, transparent 70%);
+  animation: avatarPulse 3s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes avatarPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.3;
+  }
+}
+
+.about-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  color: #ffffff;
+  letter-spacing: 0.1em;
+  text-shadow:
+    /* 内凹厚重感 - 方向统一向左上 */
+    -1px -1px 0 #808080,
+    -2px -2px 0 #606060,
+    -3px -3px 0 #404040,
+    /* 外发光层次 */
+    0 0 20px rgba(255, 255, 255, 0.3),
+    0 0 40px rgba(255, 255, 255, 0.1),
+    /* 霓虹绿微光 */
+    0 0 60px rgba(183, 255, 59, 0.2);
+}
+
+.about-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.about-role {
+  font-size: 1rem;
+  color: #b7ff3b;
+  letter-spacing: 0.15em;
+  margin-bottom: 1.5rem;
+}
+
+.about-divider {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #b7ff3b, transparent);
+  margin: 0 auto 1.5rem;
+}
+
+.about-desc {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.8;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.contact-section {
+  margin-top: 2rem;
+}
+
+.contact-title {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.2em;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+}
+
+.contact-links {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.contact-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  min-width: 80px;
+  cursor: none;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.contact-link:hover {
+  background: rgba(183,255,59,0.1);
+  border-color: #b7ff3b;
+  color: #b7ff3b;
+  transform: translateY(-3px);
+}
+
+/* 自定义 Tooltip */
+.contact-link::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(10, 10, 10, 0.9);
+  border: 1px solid #b7ff3b;
+  color: #b7ff3b;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  z-index: 100;
+  margin-bottom: 12px;
+}
+
+.contact-link:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Toast 提示 */
+.toast-notification {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(10, 10, 10, 0.95);
+  border: 1px solid #b7ff3b;
+  color: #b7ff3b;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1000;
+  box-shadow: 0 0 20px rgba(183, 255, 59, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.toast-notification::before {
+  content: '✓';
+  font-weight: bold;
+}
+
+.toast-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.contact-link svg {
+  width: 24px;
+  height: 24px;
+}
+
+.contact-link span {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+/* 滚动提示 */
+.scroll-hint {
+  position: absolute;
+  bottom: 40px;
+  left: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out 1.8s forwards;
+  z-index: 10;
+}
+
+.scroll-text {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.4);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(183,255,59,0.8), transparent);
+  animation: scrollLine 2s ease-in-out infinite;
+}
+
+@keyframes scrollLine {
+  0%, 100% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .logo-container {
+    left: 20px;
+    top: 24px;
+  }
+
+  .hero-line--top {
+    font-size: clamp(48px, 14vw, 100px);
+  }
+
+  .hero-line--bottom {
+    font-size: clamp(36px, 10vw, 80px);
+  }
+
+  .scroll-hint {
+    left: 20px;
+    bottom: 20px;
+  }
+
+  .subtitle {
+    margin-top: 2rem;
+  }
+
+  .back-btn {
+    top: 90px;
+    left: 20px;
+  }
+
+  .about-page {
+    padding: 90px 20px 40px;
+  }
+
+  .avatar {
+    width: 140px;
+    height: 140px;
+  }
+
+  .avatar-glow {
+    width: 160px;
+    height: 160px;
+  }
+
+  .about-title {
+    font-size: 2rem;
+  }
+
+  .about-name {
+    font-size: 1.5rem;
+  }
+
+  .contact-links {
+    gap: 1rem;
+  }
+
+  .contact-link {
+    min-width: 70px;
+    padding: 0.8rem;
+  }
+}
+</style>
