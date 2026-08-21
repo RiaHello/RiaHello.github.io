@@ -1,12 +1,9 @@
-// 个人经历数据 - 用于"关于我"和"作品"页面
 
 export const profileData = {
-  // 基本信息
   name: "陈科瑾 (石耳/RIA)",
   title: "AI应用开发工程师",
   tags: ["极客", "产品", "项目思维"],
 
-  // 核心技能
   skills: {
     ai: ["PyTorch微调", "LoRA/QLORA", "RAG系统", "LangChain", "GraphRAG", "Agent开发"],
     backend: ["Python (FastAPI)", "Java (Spring Boot)", "DDD架构"],
@@ -14,7 +11,6 @@ export const profileData = {
     infra: ["Docker", "VLLM部署", "Kubernetes"]
   },
 
-  // 项目经历
   projects: [
     {
       title: "智能法律咨询系统 (AI+法律)",
@@ -62,7 +58,6 @@ export const profileData = {
     }
   ],
 
-  // 技术深度 - 结合LangGraph知识
   technicalDepth: {
     title: "Agent系统架构经验",
     items: [
@@ -85,13 +80,11 @@ export const profileData = {
     ]
   },
 
-  // 荣誉
   achievements: [
     "2024美国大学生数学建模竞赛 (MCM/ICM) Meritorious Winner (一等奖)",
     "PromptCBLUE-v2医疗问答竞赛 Top 20"
   ],
 
-  // 教育背景
   education: {
     school: "南京理工大学",
     major: "计算机科学与技术",

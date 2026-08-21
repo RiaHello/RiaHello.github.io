@@ -64,13 +64,11 @@ button {
   overflow: hidden;
 }
 
-/* 选中文本样式 */
 ::selection {
   background: var(--color-lime);
   color: var(--color-bg);
 }
 
-/* 滚动条样式 */
 ::-webkit-scrollbar {
   width: 8px;
 }
