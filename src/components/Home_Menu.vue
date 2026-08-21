@@ -34,7 +34,6 @@ const handleContactClick = () => {
     <nav class="nav">
       <ul class="nav-list">
         <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'home' }" href="#home" @click.prevent="handleHomeClick">首页</a></li>
-        <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'projects' }" href="#projects">作品</a></li>
         <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'resume' }" href="#resume" @click.prevent="handleResumeClick">关于我</a></li>
         <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'contact' }" href="#contact" @click.prevent="handleContactClick">联系我</a></li>
       </ul>
