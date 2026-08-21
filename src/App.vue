@@ -14,24 +14,20 @@ onMounted(() => {
   heroVisible.value = true;
 });
 
-// 生成随机时间（毫秒）
 const randomDuration = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
-// 页面切换动画 - 三阶段：淡出 -> 扫描 -> 淡入
 const playTransition = (callback: () => void) => {
   showTransition.value = true;
   transitionProgress.value = 0;
 
-  // 固定时间
-  const fadeOutDuration = 300;    // 淡出 300ms
-  const fadeInDuration = 300;     // 淡入 300ms
+  const fadeOutDuration = 300;
+  const fadeInDuration = 300;
 
-  // 扫描阶段分段随机时间（总扫描时间控制在 1100-2000ms，整体 1.7-2.6秒）
-  const scanSegment1 = randomDuration(250, 400);   // 0-30%
-  const scanSegment2 = randomDuration(300, 500);   // 30-60%
-  const scanSegment3 = randomDuration(300, 600);   // 60-89%
-  const scanSegment4 = randomDuration(250, 400);   // 89-100%（快速完成）
+  const scanSegment1 = randomDuration(250, 400);
+  const scanSegment2 = randomDuration(300, 500);
+  const scanSegment3 = randomDuration(300, 600);
+  const scanSegment4 = randomDuration(250, 400);
 
   const scanDuration = scanSegment1 + scanSegment2 + scanSegment3 + scanSegment4;
   const totalDuration = fadeOutDuration + scanDuration + fadeInDuration;
@@ -45,20 +41,16 @@ const playTransition = (callback: () => void) => {
 
   const startTime = performance.now();
 
-  // 计算当前进度对应的阶段和细分进度
   const calculateProgress = (elapsed: number) => {
     const totalProgress = Math.min(elapsed / totalDuration, 1);
 
     if (totalProgress < fadeOutDuration / totalDuration) {
-      // 淡出阶段
       const phaseProgress = elapsed / fadeOutDuration;
       return { phase: 'fadeOut' as const, totalProgress, phaseProgress };
     } else if (totalProgress < (fadeOutDuration + scanDuration) / totalDuration) {
-      // 扫描阶段
       const scanElapsed = elapsed - fadeOutDuration;
       const scanProgress = Math.min(scanElapsed / scanDuration, 1);
 
-      // 计算扫描细分阶段
       let scanPhase: 'segment1' | 'segment2' | 'segment3' | 'segment4';
       let scanPhaseProgress: number;
 
@@ -78,7 +70,6 @@ const playTransition = (callback: () => void) => {
 
       return { phase: 'scan' as const, totalProgress, phaseProgress: scanProgress, scanPhase, scanPhaseProgress };
     } else {
-      // 淡入阶段
       const fadeInElapsed = elapsed - fadeOutDuration - scanDuration;
       const phaseProgress = Math.min(fadeInElapsed / fadeInDuration, 1);
       return { phase: 'fadeIn' as const, totalProgress, phaseProgress };
@@ -94,14 +85,12 @@ const playTransition = (callback: () => void) => {
     if (state.totalProgress < 1) {
       requestAnimationFrame(animate);
     } else {
-      // 动画完全结束，隐藏过渡层
       setTimeout(() => {
         showTransition.value = false;
       }, 100);
     }
   };
 
-  // 在扫描阶段约75%时切换页面内容
   const switchTime = fadeOutDuration + scanSegment1 + scanSegment2 + scanSegment3 * 0.6;
   setTimeout(() => {
     callback();
@@ -131,10 +120,8 @@ const goBack = () => {
   });
 };
 
-// RIA 悬停状态
 const isRiaHovered = ref(false);
 
-// Toast 状态
 const toastVisible = ref(false);
 const toastMessage = ref('');
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -148,7 +135,6 @@ const showToastNotification = (message: string) => {
   }, 2000);
 };
 
-// 复制到剪贴板功能
 const copyToClipboard = (text: string, label: string) => {
   navigator.clipboard.writeText(text).then(() => {
     console.log(`${label} copied: ${text}`);
@@ -162,7 +148,6 @@ const copyToClipboard = (text: string, label: string) => {
 
 <template>
   <div class="page">
-    <!-- 页面过渡动画 -->
     <PageTransition
       v-if="showTransition"
       :show="showTransition"
@@ -176,10 +161,8 @@ const copyToClipboard = (text: string, label: string) => {
       @go-resume="goToResume"
     />
 
-    <!-- 数字流背景 -->
     <MatrixRain />
 
-    <!-- 几何装饰元素 -->
     <div class="decorations" aria-hidden="true">
       <div class="deco-square deco-1"></div>
       <div class="deco-square deco-2"></div>
@@ -190,12 +173,10 @@ const copyToClipboard = (text: string, label: string) => {
       <div class="deco-dot deco-dot-2"></div>
     </div>
 
-    <!-- 背景网格 -->
     <div class="bg-grid" aria-hidden="true">
       <div class="grid-line" v-for="i in 20" :key="i"></div>
     </div>
 
-    <!-- Logo -->
     <div class="logo-container" :class="{ 'logo-visible': heroVisible }">
       <div class="logo-icon">
         <span class="logo-letter">R</span>
@@ -203,9 +184,7 @@ const copyToClipboard = (text: string, label: string) => {
       <span class="logo-name">RIA</span>
     </div>
 
-    <!-- 主页内容 -->
     <div v-if="!showContact && !showResume" class="hero" :class="{ 'hero-visible': heroVisible }">
-      <!-- 第一行: HI, -->
       <div class="hero-line hero-line--top" aria-label="HI,">
         <span
           v-for="(char, i) in ['H', 'I', ',']"
@@ -215,7 +194,6 @@ const copyToClipboard = (text: string, label: string) => {
         >{{ char }}</span>
       </div>
 
-      <!-- 第二行: HERE IS RIA -->
       <div class="hero-line hero-line--bottom" aria-label="HERE IS RIA">
         <span
           v-for="(char, i) in ['H', 'E', 'R', 'E', '\u00A0', 'I', 'S', '\u00A0']"
@@ -223,7 +201,6 @@ const copyToClipboard = (text: string, label: string) => {
           class="hero-letter cursor-target text-white"
           :style="{ animationDelay: `${0.3 + i * 0.06}s` }"
         >{{ char }}</span>
-        <!-- RIA 整体悬停区域 -->
         <span
           class="ria-group cursor-target"
           @mouseenter="isRiaHovered = true"
@@ -240,13 +217,11 @@ const copyToClipboard = (text: string, label: string) => {
         </span>
       </div>
 
-      <!-- 副标题 -->
       <div class="subtitle" :class="{ 'subtitle-visible': isRiaHovered }">
         <p class="subtitle-tags">极客 · 产品 · 项目思维</p>
         <p class="subtitle-text">你好~这里是石耳，也叫RIA</p>
       </div>
 
-      <!-- CTA 按钮组 -->
       <div class="cta-group">
         <button class="cta-btn cursor-target" @click="goToResume">
           <span>关于我</span>
@@ -264,7 +239,6 @@ const copyToClipboard = (text: string, label: string) => {
       </div>
     </div>
 
-    <!-- 简历页面 (关于我) -->
     <div v-else-if="showResume" class="resume-page" :class="{ 'resume-visible': showResume }">
       <div class="resume-container">
         <div class="resume-header">
@@ -319,13 +293,12 @@ const copyToClipboard = (text: string, label: string) => {
               <div class="timeline-item">
                 <div class="timeline-dot"></div>
                 <div class="timeline-content">
-                  <span class="timeline-date">2024.12 - 至今</span>
-                  <h4 class="timeline-role">全栈开发工程师 @ 网新 (Insigma)</h4>
+                  <h4 class="timeline-role">AI 产品经理 @ 顺丰速运</h4>
                   <p class="timeline-desc">
-                    负责企业级 AI 应用的全栈开发与架构设计。<br>
-                    • 核心参与研发并推行 <strong>SDD (大模型开发规范)</strong>，通过标准化 Prompt 接口与模块化 Agent 设计重构研发流程。该规范的落地极大提升了代码生成质量与开发效率，推动研发中心实现了显著的人效优化与组织结构精简。<br>
-                    • 采用 <strong>Spring Boot + Vue</strong> 架构，集成 <strong>ChatGLM/DeepSeek</strong> 模型构建 RAG 知识库系统，实现业务流与 AI 能力的无缝融合。<br>
-                    • 实施 <strong>LoRA (r=8)</strong> 微调技术，针对垂直领域业务数据进行模型适配，解决通用模型在特定场景下的幻觉问题。
+                    负责「丰晓易」智能助手 Agent 化升级与核心场景落地。<br>
+                    • 覆盖账单触达、差异查因、调账、发票服务、支付核销 <strong>5 类月结结算场景</strong>，完成需求优先级、业务规则与验收口径定义<br>
+                    • 参与治理 <strong>500+ 份业务文档</strong>、沉淀 <strong>150+ 对标准 QA</strong>，完成 6 类 RAG 知识域与 7 类只读 API Tools 的能力映射<br>
+                    • 参与建立分层评测与版本迭代机制，推动意图识别准确率 <strong>93%+</strong>、RAG 召回率 <strong>96%+</strong>
                   </p>
                 </div>
               </div>
@@ -333,13 +306,24 @@ const copyToClipboard = (text: string, label: string) => {
               <div class="timeline-item">
                 <div class="timeline-dot"></div>
                 <div class="timeline-content">
-                  <span class="timeline-date">2023.10 - 2024.11</span>
-                  <h4 class="timeline-role">算法工程师 @ 智谱 AI (Zhipu AI)</h4>
+                  <h4 class="timeline-role">AI 应用开发 / AI 产品经理 @ 浙大网新</h4>
                   <p class="timeline-desc">
-                    核心参与 <strong>Critic (思维链评判模型)</strong> 项目研发，专注于提升大模型的逻辑推理与自我纠错能力。<br>
-                    • 设计并构建高质量 <strong>Chain of Thought (CoT)</strong> 训练数据集，通过 <strong>Step-by-Step</strong> 推理路径增强模型在复杂数学与代码任务中的表现。<br>
-                    • 参与 <strong>Process Reward Model (PRM)</strong> 的训练与验证，优化 <strong>RLHF (PPO)</strong> 算法中的奖励机制，使模型具备细粒度的逻辑验证与 <strong>Self-Correction (自我修正)</strong> 能力。<br>
-                    • 负责基座模型在 <strong>Reasoning</strong> 场景下的 <strong>SFT</strong> 策略调优，结合 <strong>GraphRAG</strong> 技术解决长上下文推理中的幻觉问题，显著提升了模型在 <strong>GSM8K/HumanEval</strong> 等评测集上的核心指标。
+                    参与企业级数据与 AI 中台、智能外呼系统建设。<br>
+                    • 负责「大先生」Corpus 语料库与文件管理模块后端开发，参与模型训练与部署链路维护<br>
+                    • 参与政企业务材料智能审核应用原型：基于 <strong>Dify</strong> 串联材料解析、字段抽取、规则校验与人工复核
+                  </p>
+                </div>
+              </div>
+
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <h4 class="timeline-role">AI 工程师 @ 智谱华章</h4>
+                  <p class="timeline-desc">
+                    核心参与 <strong>Critic（思维链评判模型）</strong>项目研发，负责训练数据建设与标注团队协同。<br>
+                    • 设计并构建高质量 <strong>Chain of Thought (CoT)</strong> 训练数据集，通过 <strong>Step-by-Step</strong> 推理路径增强模型在复杂数学与代码任务中的表现<br>
+                    • 参与 <strong>Process Reward Model (PRM)</strong> 的训练与验证，优化 <strong>RLHF (PPO)</strong> 算法中的奖励机制，使模型具备细粒度逻辑验证与 <strong>Self-Correction（自我修正）</strong>能力<br>
+                    • 制定 <strong>Span 任务标注规则</strong>，完成 4 批共 <strong>48,000 条</strong>训练样本的清洗与质量复核；培训并协同 <strong>20+ 名</strong>线上实习生，累计交付 <strong>100,000+ 条</strong>标注数据，返修率从 30% 降至 <strong>12%</strong>
                   </p>
                 </div>
               </div>
@@ -349,12 +333,11 @@ const copyToClipboard = (text: string, label: string) => {
       </div>
     </div>
 
-    <!-- 联系我页面 -->
     <div v-else class="about-page" :class="{ 'about-visible': showContact }">
       <div class="about-content">
         <div class="avatar-container">
           <div class="avatar-wrapper">
-            <img src="./assets/石耳的真人照放大版.jpg" alt="石耳的头像" class="avatar" />
+            <img src="./assets/头像.png" alt="石耳的头像" class="avatar" />
           </div>
           <div class="avatar-glow"></div>
         </div>
@@ -413,12 +396,10 @@ const copyToClipboard = (text: string, label: string) => {
       </div>
     </div>
 
-    <!-- 复制提示 Toast -->
     <div class="toast-notification" :class="{ 'toast-visible': toastVisible }">
       {{ toastMessage }}
     </div>
 
-    <!-- 左下角滚动提示 -->
     <div v-if="!showContact && !showResume" class="scroll-hint" aria-hidden="true">
       <span class="scroll-text">SCROLL</span>
       <div class="scroll-line"></div>
@@ -437,7 +418,6 @@ const copyToClipboard = (text: string, label: string) => {
   cursor: none;
 }
 
-/* 背景网格 */
 .bg-grid {
   position: absolute;
   inset: 0;
@@ -455,7 +435,6 @@ const copyToClipboard = (text: string, label: string) => {
   background: linear-gradient(to bottom, transparent, #b7ff3b, transparent);
 }
 
-/* 几何装饰元素 */
 .decorations {
   position: absolute;
   inset: 0;
@@ -537,7 +516,6 @@ const copyToClipboard = (text: string, label: string) => {
   50% { opacity: 1; transform: scale(1.5); }
 }
 
-/* Logo */
 .logo-container {
   position: fixed;
   top: 32px;
@@ -579,7 +557,6 @@ const copyToClipboard = (text: string, label: string) => {
   color: #ffffff;
 }
 
-/* Hero 区域 */
 .hero {
   position: absolute;
   top: 50%;
@@ -634,7 +611,6 @@ const copyToClipboard = (text: string, label: string) => {
   }
 }
 
-/* 白色文字 - 3D效果 */
 .text-white {
   color: #ffffff;
   text-shadow:
@@ -645,12 +621,10 @@ const copyToClipboard = (text: string, label: string) => {
     0 0 40px rgba(255,255,255,0.1);
 }
 
-/* 主标题 - 简洁活力阴影 */
 .hero-line {
   filter: drop-shadow(0 4px 20px rgba(0,0,0,0.4));
 }
 
-/* 白色文字 - 增强3D效果 */
 .text-white {
   color: #ffffff;
   text-shadow:
@@ -662,7 +636,6 @@ const copyToClipboard = (text: string, label: string) => {
     0 10px 30px rgba(0,0,0,0.3);
 }
 
-/* 荧光绿文字 - 3D立体效果 */
 .text-lime {
   color: #b7ff3b;
   text-shadow:
@@ -677,7 +650,6 @@ const copyToClipboard = (text: string, label: string) => {
     0 0 100px rgba(183,255,59,0.1);
 }
 
-/* RIA 整体悬停效果 */
 .ria-group {
   display: inline-flex;
   cursor: none;
@@ -708,7 +680,6 @@ const copyToClipboard = (text: string, label: string) => {
     0 0 120px rgba(183,255,59,0.3);
 }
 
-/* 副标题 - 简洁极客风 */
 .subtitle {
   margin-top: 3rem;
   opacity: 0;
@@ -757,7 +728,6 @@ const copyToClipboard = (text: string, label: string) => {
   }
 }
 
-/* CTA 按钮组 */
 .cta-group {
   margin-top: 2.5rem;
   display: flex;
@@ -832,7 +802,6 @@ const copyToClipboard = (text: string, label: string) => {
   transform: translateY(3px);
 }
 
-/* 简历页面样式 */
 .resume-page {
   position: absolute;
   top: 0;
@@ -844,11 +813,11 @@ const copyToClipboard = (text: string, label: string) => {
   padding: 80px 20px 40px;
   opacity: 0;
   animation: aboutIn 0.5s ease-out forwards;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
 }
 
 .resume-page::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 
 .resume-container {
@@ -1018,7 +987,6 @@ const copyToClipboard = (text: string, label: string) => {
   line-height: 1.6;
 }
 
-/* 关于我页面 */
 .about-page {
   position: absolute;
   top: 0;
@@ -1052,8 +1020,8 @@ const copyToClipboard = (text: string, label: string) => {
 }
 
 .avatar-wrapper {
-  width: 180px;
-  height: 180px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   border: 3px solid #b7ff3b;
   overflow: hidden;
@@ -1062,12 +1030,10 @@ const copyToClipboard = (text: string, label: string) => {
 }
 
 .avatar {
-  width: 180px;
-  height: 250px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  position: absolute;
-  left: 0;
-  top: -77px;
+  object-position: 50% 35%;
 }
 
 .avatar-glow {
@@ -1075,8 +1041,8 @@ const copyToClipboard = (text: string, label: string) => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(183,255,59,0.3) 0%, transparent 70%);
   animation: avatarPulse 3s ease-in-out infinite;
@@ -1102,14 +1068,11 @@ const copyToClipboard = (text: string, label: string) => {
   color: #ffffff;
   letter-spacing: 0.1em;
   text-shadow:
-    /* 内凹厚重感 - 方向统一向左上 */
     -1px -1px 0 #808080,
     -2px -2px 0 #606060,
     -3px -3px 0 #404040,
-    /* 外发光层次 */
     0 0 20px rgba(255, 255, 255, 0.3),
     0 0 40px rgba(255, 255, 255, 0.1),
-    /* 霓虹绿微光 */
     0 0 60px rgba(183, 255, 59, 0.2);
 }
 
@@ -1185,7 +1148,6 @@ const copyToClipboard = (text: string, label: string) => {
   transform: translateY(-3px);
 }
 
-/* 自定义 Tooltip */
 .contact-link::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -1212,7 +1174,6 @@ const copyToClipboard = (text: string, label: string) => {
   transform: translateX(-50%) translateY(0);
 }
 
-/* Toast 提示 */
 .toast-notification {
   position: fixed;
   top: 100px;
@@ -1256,7 +1217,6 @@ const copyToClipboard = (text: string, label: string) => {
   letter-spacing: 0.05em;
 }
 
-/* 滚动提示 */
 .scroll-hint {
   position: absolute;
   bottom: 40px;
@@ -1296,7 +1256,6 @@ const copyToClipboard = (text: string, label: string) => {
   to { opacity: 1; }
 }
 
-/* 响应式 */
 @media (max-width: 768px) {
   .logo-container {
     left: 20px;
@@ -1329,14 +1288,14 @@ const copyToClipboard = (text: string, label: string) => {
     padding: 90px 20px 40px;
   }
 
-  .avatar {
-    width: 140px;
-    height: 140px;
+  .avatar-wrapper {
+    width: 120px;
+    height: 120px;
   }
 
   .avatar-glow {
-    width: 160px;
-    height: 160px;
+    width: 140px;
+    height: 140px;
   }
 
   .about-title {
