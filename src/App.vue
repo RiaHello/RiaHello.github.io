@@ -14,6 +14,9 @@ const pageFromHash = (): Page => {
 const initialPage = pageFromHash();
 const heroVisible = ref(false);
 const showContact = ref(initialPage === 'contact');
+// Keep one prepared portrait instead of fetching and decoding on every visit.
+const contactPrepared = ref(initialPage === 'contact');
+let prepareTimer: ReturnType<typeof setTimeout> | undefined;
 const showResume = ref(initialPage === 'resume');
 const showTransition = ref(false);
 const transitionProgress = ref(0);
@@ -30,6 +33,7 @@ const cancelTransition = () => {
 };
 
 const setPage = (page: Page) => {
+  if (page === 'contact') contactPrepared.value = true;
   showContact.value = page === 'contact';
   showResume.value = page === 'resume';
 };
@@ -59,6 +63,8 @@ const playTransition = (callback: () => void) => {
 
 const navigate = (page: Page) => {
   if (window.location.hash !== `#${page}`) window.history.pushState(null, '', `#${page}`);
+  // Early clicks can prepare media during the original transition too.
+  if (page === 'contact') contactPrepared.value = true;
   playTransition(() => setPage(page));
 };
 const goToContact = () => navigate('contact');
@@ -71,9 +77,12 @@ const syncFromHash = () => {
 
 onMounted(() => {
   heroVisible.value = true;
+  // Let the initial page paint before preparing the contact media in the background.
+  prepareTimer = setTimeout(() => { contactPrepared.value = true; }, 1200);
   window.addEventListener('hashchange', syncFromHash);
 });
 onUnmounted(() => {
+  clearTimeout(prepareTimer);
   cancelTransition();
   window.removeEventListener('hashchange', syncFromHash);
 });
@@ -269,7 +278,8 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <ContactPortrait v-else @go-home="goBack" @go-resume="goToResume" />
+    <ContactPortrait v-if="contactPrepared" v-show="showContact" :active="showContact"
+      @go-home="goBack" @go-resume="goToResume" />
 
     <div v-if="!showContact && !showResume" class="scroll-hint" aria-hidden="true">
       <span class="scroll-text">SCROLL</span>

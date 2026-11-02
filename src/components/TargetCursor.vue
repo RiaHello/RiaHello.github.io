@@ -48,6 +48,9 @@ const setupAnimation = () => {
   const cursor = cursorRef.value;
   cornersRef.value = cursor.querySelectorAll<HTMLDivElement>('.target-cursor-corner');
 
+  let disposed = false;
+  let moveThrottle: number | null = null;
+  let targetTimer: ReturnType<typeof setTimeout> | null = null;
   let activeTarget: Element | null = null;
   let currentTargetMove: ((ev: Event) => void) | null = null;
   let currentLeaveHandler: (() => void) | null = null;
@@ -55,6 +58,10 @@ const setupAnimation = () => {
   let resumeTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const cleanupTarget = (target: Element) => {
+    if (moveThrottle !== null) cancelAnimationFrame(moveThrottle);
+    moveThrottle = null;
+    if (targetTimer !== null) clearTimeout(targetTimer);
+    targetTimer = null;
     if (currentTargetMove) {
       target.removeEventListener('mousemove', currentTargetMove);
     }
@@ -127,6 +134,7 @@ const setupAnimation = () => {
     gsap.set(cursorRef.value, { rotation: 0 });
 
     const updateCorners = (mouseX?: number, mouseY?: number) => {
+      if (disposed || activeTarget !== target || !target.isConnected || !cursorRef.value || !cornersRef.value) return;
       const rect = target.getBoundingClientRect();
       const cursorRect = cursorRef.value!.getBoundingClientRect();
 
@@ -193,11 +201,11 @@ const setupAnimation = () => {
     isAnimatingToTarget = true;
     updateCorners();
 
-    setTimeout(() => {
-      isAnimatingToTarget = false;
+    targetTimer = setTimeout(() => {
+      targetTimer = null;
+      if (!disposed) isAnimatingToTarget = false;
     }, 1);
 
-    let moveThrottle: number | null = null;
     const targetMove = (ev: Event) => {
       if (moveThrottle || isAnimatingToTarget) return;
       moveThrottle = requestAnimationFrame(() => {
@@ -277,6 +285,11 @@ const setupAnimation = () => {
   window.addEventListener('mouseover', enterHandler, { passive: true });
 
   cleanupAnimation = () => {
+    disposed = true;
+    if (moveThrottle !== null) cancelAnimationFrame(moveThrottle);
+    moveThrottle = null;
+    if (targetTimer !== null) clearTimeout(targetTimer);
+    targetTimer = null;
     window.removeEventListener('mousemove', moveHandler);
     window.removeEventListener('mouseover', enterHandler);
 

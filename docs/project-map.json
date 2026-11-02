@@ -7,12 +7,12 @@
     {
       "id": "app",
       "path": "src/App.vue",
-      "sha256": "d148ff470cc028eee2f24ca5d0244ed36c4726e8b665c20755adb56348b4d82a"
+      "sha256": "c1bc1aea1007698f72eb3fdeb9a2be408feed25b57d0191eec308c778618f44d"
     },
     {
       "id": "contact",
       "path": "src/components/ContactPortrait.vue",
-      "sha256": "b01e308c78238ed39bb29ebef4937b809a3ff45e3589b4e2a63550c31d01b245"
+      "sha256": "91ce52b6eb0b9b1ca0f5204f89eccaee4f7c9a63f366942af1e964e5b5c58e99"
     },
     {
       "id": "menu",
@@ -101,12 +101,12 @@
             {
               "id": "app",
               "symbol": "const isRiaHovered",
-              "line": 20
+              "line": 23
             },
             {
               "id": "app",
               "symbol": "class=\"hero\"",
-              "line": 122
+              "line": 131
             },
             {
               "id": "menu",
@@ -158,7 +158,7 @@
             {
               "id": "app",
               "symbol": "class=\"resume-page\"",
-              "line": 177
+              "line": 186
             },
             {
               "id": "menu",
@@ -263,12 +263,12 @@
             {
               "id": "contact",
               "symbol": "function lookAtPointer",
-              "line": 148
+              "line": 149
             },
             {
               "id": "contact",
               "symbol": "class=\"portrait-stage\"",
-              "line": 264
+              "line": 290
             }
           ],
           "implementation_status": "源码已核对"
@@ -358,17 +358,17 @@
             {
               "id": "contact",
               "symbol": "const introduction",
-              "line": 10
+              "line": 11
             },
             {
               "id": "contact",
               "symbol": "onMounted(() =>",
-              "line": 241
+              "line": 268
             },
             {
               "id": "contact",
               "symbol": "class=\"intro-ghost\"",
-              "line": 284
+              "line": 310
             }
           ],
           "implementation_status": "源码已核对"
@@ -405,12 +405,12 @@
             {
               "id": "contact",
               "symbol": "async function copyContact",
-              "line": 189
+              "line": 190
             },
             {
               "id": "contact",
               "symbol": "class=\"contact-actions\"",
-              "line": 292
+              "line": 318
             }
           ],
           "implementation_status": "源码已核对"
@@ -444,12 +444,12 @@
             {
               "id": "contact",
               "symbol": "async function openMenu",
-              "line": 205
+              "line": 206
             },
             {
               "id": "contact",
               "symbol": "function onResize",
-              "line": 216
+              "line": 217
             }
           ],
           "implementation_status": "源码已核对"
@@ -470,7 +470,7 @@
         "steps": [
           "读取 location.hash；contact / resume 之外的值归为 home。",
           "站内导航先 pushState 写入目标哈希，再取消旧转场 RAF、切页与完成计时器。",
-          "普通模式启动随机扫描转场，到切换时刻设置 showContact / showResume；hashchange 立即同步视图。",
+          "普通模式所有页面保留随机扫描转场；hashchange立即同步视图。首页挂载1200ms后准备隐藏联系组件；提前点击联系入口时，在转场开始就准备媒体。",
           "App 卸载取消计时器和 RAF，移除 hashchange；PageTransition 卸载移除 resize 并释放 ctx、粒子。"
         ],
         "branches": [
@@ -500,7 +500,7 @@
             "impact": "进度到1后隐藏转场。"
           }
         ],
-        "selection": "最后一次导航目标生效；三页面只挂载一个。",
+        "selection": "最后一次导航目标生效；同一时刻仅显示一个页面，联系组件后台准备并持续保留。",
         "failures": [
           "未知 hash 回退首页；无服务端请求。"
         ],
@@ -513,7 +513,7 @@
           {
             "id": "app",
             "symbol": "const playTransition",
-            "line": 40
+            "line": 44
           },
           {
             "id": "transition",
@@ -531,7 +531,7 @@
         {
           "id": "app",
           "symbol": "const playTransition",
-          "line": 40
+          "line": 44
         },
         {
           "id": "transition",
@@ -624,17 +624,17 @@
           {
             "id": "contact",
             "symbol": "function flushSeek",
-            "line": 71
+            "line": 72
           },
           {
             "id": "contact",
             "symbol": "function onMediaError",
-            "line": 98
+            "line": 99
           },
           {
             "id": "contact",
             "symbol": "function onPointerMove",
-            "line": 168
+            "line": 169
           }
         ]
       },
@@ -642,17 +642,17 @@
         {
           "id": "contact",
           "symbol": "function flushSeek",
-          "line": 71
+          "line": 72
         },
         {
           "id": "contact",
           "symbol": "function onMediaError",
-          "line": 98
+          "line": 99
         },
         {
           "id": "contact",
           "symbol": "function onPointerMove",
-          "line": 168
+          "line": 169
         }
       ],
       "implementation_status": "源码已核对"
@@ -662,12 +662,12 @@
       "name": "文案与操作区呈现",
       "kind": "普通前端函数 / Vue 组件",
       "responsibility": "独立计时与减少动态效果",
-      "input": "挂载 / 媒体偏好变更",
+      "input": "active显示状态 / 媒体偏好变更",
       "output": "可见文字数量与操作区状态",
       "algorithm": {
         "subject": "介绍文字与独立操作区",
         "steps": [
-          "挂载分别安排按钮显示与第一字符计时器。",
+          "首次显示时安排按钮和首字计时器；隐藏时暂停，重进继续尚未完成的文字。",
           "typeNextLetter每次增加1个字符串单元；displayIntroduction把Indie Hacker内部空格替换为U+00A0，打字与占位层同用不可拆分显示串，保留全文高度。",
           "屏幕阅读器读取独立完整介绍；装饰和逐字层 aria-hidden。"
         ],
@@ -679,14 +679,14 @@
             "key": "actions delay",
             "value": "400 ms",
             "value_kind": "源码默认值",
-            "location": "ContactPortrait.vue: onMounted",
+            "location": "ContactPortrait.vue: updateActivity",
             "impact": "操作区不等待介绍打完。"
           },
           {
             "key": "first character delay",
             "value": "600 ms",
             "value_kind": "源码默认值",
-            "location": "ContactPortrait.vue: onMounted",
+            "location": "ContactPortrait.vue: updateActivity",
             "impact": "介绍第一字出现时刻。"
           },
           {
@@ -705,17 +705,17 @@
           {
             "id": "contact",
             "symbol": "function typeNextLetter",
-            "line": 53
+            "line": 54
           },
           {
             "id": "contact",
             "symbol": "function updateMotionPreference",
-            "line": 59
+            "line": 60
           },
           {
             "id": "contact",
             "symbol": "onMounted(() =>",
-            "line": 241
+            "line": 268
           }
         ]
       },
@@ -723,17 +723,17 @@
         {
           "id": "contact",
           "symbol": "function typeNextLetter",
-          "line": 53
+          "line": 54
         },
         {
           "id": "contact",
           "symbol": "function updateMotionPreference",
-          "line": 59
+          "line": 60
         },
         {
           "id": "contact",
           "symbol": "onMounted(() =>",
-          "line": 241
+          "line": 268
         }
       ],
       "implementation_status": "源码已核对"
@@ -780,12 +780,12 @@
           {
             "id": "contact",
             "symbol": "async function copyContact",
-            "line": 189
+            "line": 190
           },
           {
             "id": "contact",
             "symbol": "const email",
-            "line": 8
+            "line": 9
           }
         ]
       },
@@ -793,12 +793,12 @@
         {
           "id": "contact",
           "symbol": "async function copyContact",
-          "line": 189
+          "line": 190
         },
         {
           "id": "contact",
           "symbol": "const email",
-          "line": 8
+          "line": 9
         }
       ],
       "implementation_status": "源码已核对"
@@ -838,17 +838,17 @@
           {
             "id": "contact",
             "symbol": "async function openMenu",
-            "line": 205
+            "line": 206
           },
           {
             "id": "contact",
             "symbol": "function onMenuKeydown",
-            "line": 230
+            "line": 232
           },
           {
             "id": "contact",
             "symbol": "onUnmounted(() =>",
-            "line": 250
+            "line": 276
           }
         ]
       },
@@ -856,17 +856,17 @@
         {
           "id": "contact",
           "symbol": "async function openMenu",
-          "line": 205
+          "line": 206
         },
         {
           "id": "contact",
           "symbol": "function onMenuKeydown",
-          "line": 230
+          "line": 232
         },
         {
           "id": "contact",
           "symbol": "onUnmounted(() =>",
-          "line": 250
+          "line": 276
         }
       ],
       "implementation_status": "源码已核对"
@@ -1081,7 +1081,7 @@
         {
           "id": "contact",
           "symbol": "async function copyContact",
-          "line": 189
+          "line": 190
         }
       ],
       "implementation_status": "源码已核对"
@@ -1099,7 +1099,7 @@
         {
           "id": "contact",
           "symbol": "class=\"contact-actions\"",
-          "line": 292
+          "line": 318
         }
       ],
       "implementation_status": "源码已核对"

@@ -4,7 +4,9 @@
 
 ## 组件与导航
 
-新增 `src/components/ContactPortrait.vue`，封装肖像、逐字文案、联系方式、联系页专用移动导航与反馈；向 App 发送 go-home / go-resume。App 在联系页隐藏旧外壳导航、Logo、装饰和 WaterField 实例，其他页面保持原内容。原 WaterField 文件保留。使用 #contact / #resume / #home 与状态同步，支持直达、刷新和浏览器前进后退；保留已有切换动画，避免并发切换留下过期回调。实际导航使用的 PageTransition 在卸载时移除 resize 监听并释放画布及粒子引用。
+新增 `src/components/ContactPortrait.vue`，封装肖像、逐字文案、联系方式、联系页专用移动导航与反馈；向 App 发送 go-home / go-resume。App 在联系页隐藏旧外壳导航、Logo、装饰和 WaterField 实例，其他页面保持原内容。原 WaterField 文件保留。使用 #contact / #resume / #home 与状态同步，支持直达、刷新和浏览器前进后退；所有页面保留已有切换动画，避免并发切换留下过期回调。实际导航使用的 PageTransition 在卸载时移除 resize 监听并释放画布及粒子引用。
+
+首页挂载1200ms后后台准备ContactPortrait，v-show控制显示并复用同一视频节点；首次直接进入联系页则立即挂载；提前点击联系入口时，在转场开始就准备媒体，不等实际切页。隐藏时active=false暂停介绍计时、朝向RAF与TextPressure，仅一次复位正面，允许视频完成初始化定位。首次显示才开始介绍，重进继续未完成文字；本地Allura和Roboto Flex字体提前加载。慢网或视频失败仍以正面海报兜底，不阻塞导航。
 
 ## 媒体、交互与异常
 

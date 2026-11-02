@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import TextPressure from './TextPressure.vue';
 import portraitVideo from '../assets/contact-gaze.mp4';
 import portraitPoster from '../assets/contact-portrait-poster.jpg';
 
+const props = withDefaults(defineProps<{ active?: boolean }>(), { active: true });
 const emit = defineEmits<{ goHome: []; goResume: [] }>();
 const email = 'rudrakshaishere@gmail.com';
 const wechat = 'Ria_is_here';
@@ -51,7 +52,7 @@ function clearTyping() {
 }
 
 function typeNextLetter() {
-  if (disposed) return;
+  if (disposed || !props.active) return;
   visibleLetters.value += 1;
   if (visibleLetters.value < introduction.length) typeTimer = setTimeout(typeNextLetter, 38);
 }
@@ -117,7 +118,7 @@ function timeForGaze(gaze: number) {
 
 function animateGaze(now: number) {
   gazeFrame = 0;
-  if (disposed || mediaFailed.value) return;
+  if (disposed || !props.active || mediaFailed.value) return;
   const elapsed = Math.min((now - gazeTick) / 1000, 0.05);
   gazeTick = now;
   const remaining = targetGaze.value - currentGaze;
@@ -166,7 +167,7 @@ function onPointerDown(event: PointerEvent) {
 }
 
 function onPointerMove(event: PointerEvent) {
-  if (menuOpen.value) return;
+  if (!props.active || menuOpen.value) return;
   if (event.pointerType === 'mouse') {
     if (reducedMotion.value) {
       lastMouseX = null;
@@ -214,6 +215,7 @@ function closeMenu(restoreFocus = true) {
 }
 
 function onResize() {
+  if (!props.active) return;
   if (window.innerWidth > 900 && menuOpen.value) {
     closeMenu(false);
     nextTick(() => homeLink.value?.focus());
@@ -238,13 +240,37 @@ function onMenuKeydown(event: KeyboardEvent) {
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 }
 
+function updateActivity() {
+  clearTyping();
+  cancelAnimationFrame(gazeFrame);
+  gazeFrame = 0;
+  lastMouseX = null;
+  touch = null;
+  if (!props.active) {
+    menuOpen.value = false;
+    // Reset once to the sharp front frame; no pointer or animation loop runs hidden.
+    currentGaze = 0;
+    targetGaze.value = 0;
+    if (duration.value) setTime(timeForGaze(0));
+    return;
+  }
+  if (reducedMotion.value) {
+    visibleLetters.value = introduction.length;
+    actionsVisible.value = true;
+  } else {
+    if (!actionsVisible.value) revealTimer = setTimeout(() => { actionsVisible.value = true; }, 400);
+    if (visibleLetters.value < introduction.length) typeTimer = setTimeout(typeNextLetter, 600);
+  }
+}
+
+watch(() => props.active, updateActivity);
+
 onMounted(() => {
   motionPreference.addEventListener('change', updateMotionPreference);
   window.addEventListener('resize', onResize);
-  if (!reducedMotion.value) {
-    revealTimer = setTimeout(() => { actionsVisible.value = true; }, 400);
-    typeTimer = setTimeout(typeNextLetter, 600);
-  }
+  // The handwritten background must also be ready while the page is hidden.
+  document.fonts.load('400 16px "Contact Allura"').catch(() => {});
+  updateActivity();
 });
 
 onUnmounted(() => {
@@ -282,7 +308,7 @@ onUnmounted(() => {
 
       <section class="contact-content" aria-labelledby="contact-title">
         <div class="intro-ghost" aria-hidden="true"><span>Our story</span><span>is just beginning.</span></div>
-        <h1 id="contact-title" aria-label="Let's talk."><TextPressure text="Let's talk." :active="!menuOpen" /></h1>
+        <h1 id="contact-title" aria-label="Let's talk."><TextPressure text="Let's talk." :active="active && !menuOpen" /></h1>
         <p class="sr-only">{{ introduction }}</p>
         <p class="introduction" aria-hidden="true">
           <span class="intro-spacer">{{ displayIntroduction }}</span>
