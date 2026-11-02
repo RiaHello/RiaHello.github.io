@@ -1,0 +1,8 @@
+.venv/
+.env
+.env.*
+!.env.example
+data/public_resume.md
+__pycache__/
+.pytest_cache/
+*.pyc

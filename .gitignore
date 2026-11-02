@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local credentials and development evidence
+.env
+.env.*
+!.env.example
+.playwright-cli/
+output/
+.sdd/

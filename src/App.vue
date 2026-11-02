@@ -3,167 +3,102 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import HomeMenu from './components/Home_Menu.vue';
 import MatrixRain from './components/MatrixRain.vue';
 import PageTransition from './components/PageTransition.vue';
+import ContactPortrait from './components/ContactPortrait.vue';
+import ResumeAssistant from './components/ResumeAssistant.vue';
 
+type Page = 'home' | 'resume' | 'contact';
+const pageFromHash = (): Page => {
+  const hash = window.location.hash.slice(1);
+  return hash === 'contact' || hash === 'resume' ? hash : 'home';
+};
+const initialPage = pageFromHash();
 const heroVisible = ref(false);
-const showContact = ref(false);
-const showResume = ref(false);
+const showContact = ref(initialPage === 'contact');
+const showResume = ref(initialPage === 'resume');
 const showTransition = ref(false);
 const transitionProgress = ref(0);
+const isRiaHovered = ref(false);
+let transitionFrame = 0;
+let switchTimer: ReturnType<typeof setTimeout> | undefined;
+let finishTimer: ReturnType<typeof setTimeout> | undefined;
 
-onMounted(() => {
-  heroVisible.value = true;
-});
+const cancelTransition = () => {
+  cancelAnimationFrame(transitionFrame);
+  clearTimeout(switchTimer);
+  clearTimeout(finishTimer);
+  showTransition.value = false;
+};
+
+const setPage = (page: Page) => {
+  showContact.value = page === 'contact';
+  showResume.value = page === 'resume';
+};
 
 const randomDuration = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
 const playTransition = (callback: () => void) => {
+  cancelTransition();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    callback();
+    return;
+  }
   showTransition.value = true;
   transitionProgress.value = 0;
-
-  const fadeOutDuration = 300;
-  const fadeInDuration = 300;
-
-  const scanSegment1 = randomDuration(250, 400);
-  const scanSegment2 = randomDuration(300, 500);
-  const scanSegment3 = randomDuration(300, 600);
-  const scanSegment4 = randomDuration(250, 400);
-
-  const scanDuration = scanSegment1 + scanSegment2 + scanSegment3 + scanSegment4;
-  const totalDuration = fadeOutDuration + scanDuration + fadeInDuration;
-
-  console.log('Transition timing:', {
-    fadeOut: fadeOutDuration,
-    scan: scanDuration,
-    fadeIn: fadeInDuration,
-    total: totalDuration
-  });
-
+  const scanSegments = [randomDuration(250, 400), randomDuration(300, 500), randomDuration(300, 600), randomDuration(250, 400)];
+  const totalDuration = 600 + scanSegments.reduce((sum, segment) => sum + segment, 0);
   const startTime = performance.now();
-
-  const calculateProgress = (elapsed: number) => {
-    const totalProgress = Math.min(elapsed / totalDuration, 1);
-
-    if (totalProgress < fadeOutDuration / totalDuration) {
-      const phaseProgress = elapsed / fadeOutDuration;
-      return { phase: 'fadeOut' as const, totalProgress, phaseProgress };
-    } else if (totalProgress < (fadeOutDuration + scanDuration) / totalDuration) {
-      const scanElapsed = elapsed - fadeOutDuration;
-      const scanProgress = Math.min(scanElapsed / scanDuration, 1);
-
-      let scanPhase: 'segment1' | 'segment2' | 'segment3' | 'segment4';
-      let scanPhaseProgress: number;
-
-      if (scanElapsed < scanSegment1) {
-        scanPhase = 'segment1';
-        scanPhaseProgress = scanElapsed / scanSegment1;
-      } else if (scanElapsed < scanSegment1 + scanSegment2) {
-        scanPhase = 'segment2';
-        scanPhaseProgress = (scanElapsed - scanSegment1) / scanSegment2;
-      } else if (scanElapsed < scanSegment1 + scanSegment2 + scanSegment3) {
-        scanPhase = 'segment3';
-        scanPhaseProgress = (scanElapsed - scanSegment1 - scanSegment2) / scanSegment3;
-      } else {
-        scanPhase = 'segment4';
-        scanPhaseProgress = (scanElapsed - scanSegment1 - scanSegment2 - scanSegment3) / scanSegment4;
-      }
-
-      return { phase: 'scan' as const, totalProgress, phaseProgress: scanProgress, scanPhase, scanPhaseProgress };
-    } else {
-      const fadeInElapsed = elapsed - fadeOutDuration - scanDuration;
-      const phaseProgress = Math.min(fadeInElapsed / fadeInDuration, 1);
-      return { phase: 'fadeIn' as const, totalProgress, phaseProgress };
-    }
-  };
-
   const animate = (currentTime: number) => {
-    const elapsed = currentTime - startTime;
-    const state = calculateProgress(elapsed);
-
-    transitionProgress.value = state.totalProgress;
-
-    if (state.totalProgress < 1) {
-      requestAnimationFrame(animate);
-    } else {
-      setTimeout(() => {
-        showTransition.value = false;
-      }, 100);
-    }
+    transitionProgress.value = Math.min((currentTime - startTime) / totalDuration, 1);
+    if (transitionProgress.value < 1) transitionFrame = requestAnimationFrame(animate);
+    else finishTimer = setTimeout(() => { showTransition.value = false; }, 100);
   };
-
-  const switchTime = fadeOutDuration + scanSegment1 + scanSegment2 + scanSegment3 * 0.6;
-  setTimeout(() => {
-    callback();
-  }, switchTime);
-
-  requestAnimationFrame(animate);
+  switchTimer = setTimeout(callback, 300 + scanSegments[0] + scanSegments[1] + scanSegments[2] * 0.6);
+  transitionFrame = requestAnimationFrame(animate);
 };
 
-const goToContact = () => {
-  playTransition(() => {
-    showContact.value = true;
-    showResume.value = false;
-  });
+const navigate = (page: Page) => {
+  if (window.location.hash !== `#${page}`) window.history.pushState(null, '', `#${page}`);
+  playTransition(() => setPage(page));
+};
+const goToContact = () => navigate('contact');
+const goToResume = () => navigate('resume');
+const goBack = () => navigate('home');
+const syncFromHash = () => {
+  cancelTransition();
+  setPage(pageFromHash());
 };
 
-const goToResume = () => {
-  playTransition(() => {
-    showResume.value = true;
-    showContact.value = false;
-  });
-};
-
-const goBack = () => {
-  playTransition(() => {
-    showContact.value = false;
-    showResume.value = false;
-  });
-};
-
-const isRiaHovered = ref(false);
-
-const toastVisible = ref(false);
-const toastMessage = ref('');
-let toastTimer: ReturnType<typeof setTimeout> | null = null;
-
-const showToastNotification = (message: string) => {
-  if (toastTimer) clearTimeout(toastTimer);
-  toastMessage.value = message;
-  toastVisible.value = true;
-  toastTimer = setTimeout(() => {
-    toastVisible.value = false;
-  }, 2000);
-};
-
-const copyToClipboard = (text: string, label: string) => {
-  navigator.clipboard.writeText(text).then(() => {
-    console.log(`${label} copied: ${text}`);
-    showToastNotification(`已复制 ${label}: ${text}`);
-  }).catch(err => {
-    console.error('Failed to copy: ', err);
-    showToastNotification('复制失败，请重试');
-  });
-};
+onMounted(() => {
+  heroVisible.value = true;
+  window.addEventListener('hashchange', syncFromHash);
+});
+onUnmounted(() => {
+  cancelTransition();
+  window.removeEventListener('hashchange', syncFromHash);
+});
 </script>
 
 <template>
-  <div class="page">
+  <div class="page" :class="{ 'page--contact': showContact }">
     <PageTransition
       v-if="showTransition"
       :show="showTransition"
       :progress="transitionProgress"
     />
 
-    <HomeMenu 
-      :active-section="showContact ? 'contact' : (showResume ? 'resume' : 'home')" 
+    <HomeMenu
+      v-if="!showContact"
+      :active-section="showContact ? 'contact' : (showResume ? 'resume' : 'home')"
+      :on-light="showContact"
       @go-home="goBack" 
       @go-contact="goToContact"
       @go-resume="goToResume"
     />
 
-    <MatrixRain />
+    <MatrixRain v-if="!showContact" />
 
-    <div class="decorations" aria-hidden="true">
+    <div v-if="!showContact" class="decorations" aria-hidden="true">
       <div class="deco-square deco-1"></div>
       <div class="deco-square deco-2"></div>
       <div class="deco-square deco-3"></div>
@@ -173,11 +108,11 @@ const copyToClipboard = (text: string, label: string) => {
       <div class="deco-dot deco-dot-2"></div>
     </div>
 
-    <div class="bg-grid" aria-hidden="true">
+    <div v-if="!showContact" class="bg-grid" aria-hidden="true">
       <div class="grid-line" v-for="i in 20" :key="i"></div>
     </div>
 
-    <div class="logo-container" :class="{ 'logo-visible': heroVisible }">
+    <div v-if="!showContact" class="logo-container" :class="{ 'logo-visible': heroVisible }">
       <div class="logo-icon">
         <span class="logo-letter">R</span>
       </div>
@@ -329,76 +264,12 @@ const copyToClipboard = (text: string, label: string) => {
               </div>
             </div>
           </div>
+          <ResumeAssistant />
         </div>
       </div>
     </div>
 
-    <div v-else class="about-page" :class="{ 'about-visible': showContact }">
-      <div class="about-content">
-        <div class="avatar-container">
-          <div class="avatar-wrapper">
-            <img src="./assets/头像.png" alt="石耳的头像" class="avatar" />
-          </div>
-          <div class="avatar-glow"></div>
-        </div>
-
-        <div class="about-info">
-          <p class="about-name">石耳</p>
-          <p class="about-role">极客 · 产品 · 项目思维</p>
-
-          <div class="about-divider"></div>
-
-          <p class="about-desc">
-            热爱技术与设计的创造者，专注于打造有温度的数字产品。
-            相信好的产品是技术与艺术的完美结合。
-          </p>
-        </div>
-
-        <h2 class="about-title">Coffee Chat</h2>
-
-        <div class="contact-section">
-          <div class="contact-links">
-            <div 
-              class="contact-link cursor-target" 
-              @click="copyToClipboard('rudrakshaishere@gmail.com', 'Email')"
-              data-tooltip="rudrakshaishere@gmail.com"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-              <span>Email</span>
-            </div>
-            <div 
-              class="contact-link cursor-target" 
-              @click="copyToClipboard('https://github.com/RiaHello', 'GitHub')"
-              data-tooltip="https://github.com/RiaHello"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-              </svg>
-              <span>GitHub</span>
-            </div>
-            <div 
-              class="contact-link cursor-target" 
-              @click="copyToClipboard('Ria_is_here', '微信号')"
-              data-tooltip="微信号：Ria_is_here"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-              </svg>
-              <span>微信</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="toast-notification" :class="{ 'toast-visible': toastVisible }">
-      {{ toastMessage }}
-    </div>
+    <ContactPortrait v-else @go-home="goBack" @go-resume="goToResume" />
 
     <div v-if="!showContact && !showResume" class="scroll-hint" aria-hidden="true">
       <span class="scroll-text">SCROLL</span>
@@ -416,6 +287,11 @@ const copyToClipboard = (text: string, label: string) => {
   overflow: hidden;
   font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
   cursor: none;
+}
+
+.page--contact {
+  background: #171916;
+  cursor: auto;
 }
 
 .bg-grid {
@@ -998,6 +874,7 @@ const copyToClipboard = (text: string, label: string) => {
   align-items: center;
   justify-content: center;
   padding: 100px 40px 40px;
+  background: #f6f7fb;
   opacity: 0;
   animation: aboutIn 0.5s ease-out forwards;
 }
@@ -1009,8 +886,12 @@ const copyToClipboard = (text: string, label: string) => {
 }
 
 .about-content {
+  position: relative;
+  z-index: 2;
   text-align: center;
   max-width: 500px;
+  padding: 1.5rem 1.25rem;
+  border-radius: 28px;
 }
 
 .avatar-container {
@@ -1314,5 +1195,30 @@ const copyToClipboard = (text: string, label: string) => {
     min-width: 70px;
     padding: 0.8rem;
   }
+}
+
+.page--contact .logo-name,
+.page--contact .about-name,
+.page--contact .about-title,
+.page--contact .about-desc {
+  color: #1a1a1a;
+  text-shadow: none;
+}
+
+.page--contact .about-role {
+  color: #4d7c0f;
+  text-shadow: none;
+}
+
+.page--contact .contact-link {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(20, 20, 20, 0.14);
+  color: #222;
+}
+
+.page--contact .contact-link:hover {
+  background: #fff;
+  border-color: #1a1a1a;
+  color: #1a1a1a;
 }
 </style>

@@ -12,5 +12,8 @@ export default defineConfig({
     port: 5174,
     strictPort: false,
     allowedHosts: true,
+    proxy: {
+      '/api/v1/resume': { target: 'http://127.0.0.1:8000', changeOrigin: false },
+    },
   }
 })

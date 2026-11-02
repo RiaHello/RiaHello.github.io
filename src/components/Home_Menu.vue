@@ -3,6 +3,7 @@ import TargetCursor from './TargetCursor.vue';
 
 const props = defineProps<{
   activeSection?: 'home' | 'resume' | 'projects' | 'contact'
+  onLight?: boolean
 }>();
 
 const emit = defineEmits<{
@@ -33,9 +34,9 @@ const handleContactClick = () => {
 
     <nav class="nav">
       <ul class="nav-list">
-        <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'home' }" href="#home" @click.prevent="handleHomeClick">首页</a></li>
-        <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'resume' }" href="#resume" @click.prevent="handleResumeClick">关于我</a></li>
-        <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'contact' }" href="#contact" @click.prevent="handleContactClick">联系我</a></li>
+        <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'home', 'nav-link--ink': onLight }" href="#home" @click.prevent="handleHomeClick">首页</a></li>
+        <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'resume', 'nav-link--ink': onLight }" href="#resume" @click.prevent="handleResumeClick">关于我</a></li>
+        <li><a class="nav-link cursor-target" :class="{ 'nav-link--active': activeSection === 'contact', 'nav-link--ink': onLight }" href="#contact" @click.prevent="handleContactClick">联系我</a></li>
       </ul>
     </nav>
   </div>
@@ -77,6 +78,16 @@ const handleContactClick = () => {
 .nav-link--active {
   text-decoration: underline;
   text-underline-offset: 6px;
+}
+
+.nav-link--ink {
+  color: #1c1c1c;
+}
+
+.nav-link--ink.nav-link--active {
+  color: #3f6212;
+  text-shadow: none;
+  animation: none;
 }
 
 .nav-link--active {

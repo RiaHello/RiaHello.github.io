@@ -1,0 +1,1157 @@
+{
+  "version": 1,
+  "title": "RIA · 页面功能与实现",
+  "reviewed_at": "2026-11-01",
+  "review_boundary": "源码指纹核对不等同运行验收。简历助手使用FastAPI、Redis与DeepSeek Responses API；离线测试不等于真实账户/简历/模型事实准确性验证。",
+  "sources": [
+    {
+      "id": "app",
+      "path": "src/App.vue",
+      "sha256": "d148ff470cc028eee2f24ca5d0244ed36c4726e8b665c20755adb56348b4d82a"
+    },
+    {
+      "id": "contact",
+      "path": "src/components/ContactPortrait.vue",
+      "sha256": "b01e308c78238ed39bb29ebef4937b809a3ff45e3589b4e2a63550c31d01b245"
+    },
+    {
+      "id": "menu",
+      "path": "src/components/Home_Menu.vue",
+      "sha256": "63c743eb10a0b60355f6c55d0e31166d81b2c9c130e940549818010798950379"
+    },
+    {
+      "id": "transition",
+      "path": "src/components/PageTransition.vue",
+      "sha256": "79e632e5799c13a57c5f22a4e2f7e26310f58bc1e2ff5a873ced22c7c634d60e"
+    },
+    {
+      "id": "pressure",
+      "path": "src/components/TextPressure.vue",
+      "sha256": "379ccde2ae1c85aee4bf089fe11f8e995cbbc3759ddf982b370d1fd2702c423c"
+    },
+    {
+      "id": "resume-ui",
+      "path": "src/components/ResumeAssistant.vue",
+      "sha256": "c8143115e2e8425d62d7e7084a6730360fc02613a28591f95aea600791f6e2da"
+    },
+    {
+      "id": "resume-client",
+      "path": "src/lib/resume-chat.js",
+      "sha256": "110174b328b4c82fa1ebf3ea367e0852a5243f0156105d73c054b026a326e100"
+    },
+    {
+      "id": "resume-api",
+      "path": "backend/app/main.py",
+      "sha256": "222c65355b7d9bf7a7134da003499b1e352d5af96eb05031b45d11223c66474e"
+    },
+    {
+      "id": "resume-model",
+      "path": "backend/app/services/ai_client.py",
+      "sha256": "a7e16c0c68d51e756d55a76166bc82136ae7101c1fbaf49cdb654352de6e2a9e"
+    },
+    {
+      "id": "resume-limit",
+      "path": "backend/app/services/rate_limiter.py",
+      "sha256": "d089b7ce380ab544ec527aec0d691fb0f8e5065fa7458173d10f9136ccc3a906"
+    },
+    {
+      "id": "resume-prompt",
+      "path": "backend/app/prompts/resume_assistant.txt",
+      "sha256": "4a925a0a24bd98c4e3c5ec2cd71ec212c30de14faf8178af5818582f10e2d760"
+    }
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "name": "首页",
+      "route": "#home",
+      "purpose": "认识 RIA，并进入关于我或联系我。",
+      "features": [
+        {
+          "id": "home-intro",
+          "name": "身份介绍与入口",
+          "trigger": "打开首页、鼠标停留 RIA、点击主要按钮",
+          "input": "浏览器路径、悬停、导航按钮",
+          "output": "显示个人定位或进入目标页面",
+          "flow": [
+            {
+              "actor": "浏览器前端",
+              "action": "显示 HI, HERE IS RIA 和两个入口。",
+              "data": "",
+              "branch": ""
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "悬停 RIA 更新 isRiaHovered，显示副标题；移开后隐藏。",
+              "data": "",
+              "branch": ""
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "点击关于我/联系我，通过共享导航切页。",
+              "data": "resume / contact",
+              "branch": "不调用后端。"
+            }
+          ],
+          "module_ids": [
+            "navigation"
+          ],
+          "api_ids": [],
+          "sources": [
+            {
+              "id": "app",
+              "symbol": "const isRiaHovered",
+              "line": 20
+            },
+            {
+              "id": "app",
+              "symbol": "class=\"hero\"",
+              "line": 122
+            },
+            {
+              "id": "menu",
+              "symbol": "const handleHomeClick",
+              "line": 15
+            }
+          ],
+          "implementation_status": "源码已核对"
+        }
+      ]
+    },
+    {
+      "id": "resume",
+      "name": "关于我",
+      "route": "#resume",
+      "purpose": "阅读个人简介、技术栈与工作经历。",
+      "features": [
+        {
+          "id": "resume-read",
+          "name": "阅读履历并继续导航",
+          "trigger": "打开 #resume 或点击关于我",
+          "input": "静态页面内容与纵向滚动",
+          "output": "个人简介、AI/工程技术栈、工作经历",
+          "flow": [
+            {
+              "actor": "浏览器前端",
+              "action": "App 设置 showResume 并挂载简历区域。",
+              "data": "",
+              "branch": ""
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "用户纵向滚动阅读静态内容。",
+              "data": "内容内嵌于 App.vue",
+              "branch": "简历中提及 Agent / API 是经历文本，不是本网站正在调用的能力。"
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "顶部导航继续前往首页或联系我。",
+              "data": "",
+              "branch": ""
+            }
+          ],
+          "module_ids": [
+            "navigation"
+          ],
+          "api_ids": [],
+          "sources": [
+            {
+              "id": "app",
+              "symbol": "class=\"resume-page\"",
+              "line": 177
+            },
+            {
+              "id": "menu",
+              "symbol": "const handleResumeClick",
+              "line": 19
+            }
+          ],
+          "implementation_status": "源码已核对"
+        },
+        {
+          "id": "resume-chat",
+          "name": "向AI简历助手提问",
+          "trigger": "在关于我底部的单行输入栏输入并发送；长内容自动增高",
+          "input": "question和最近3轮完整问答；公开简历仅在后端读取",
+          "output": "纯文本答案或错误；约三轮可视高度，内部滚动查看全部记录，输入区在滚动区外",
+          "flow": [
+            {
+              "actor": "Vue前端",
+              "action": "空框浅灰逐字提示，输入时隐藏；输入栏随内容自动增高或回缩；规范化问题，按3轮/6000码点组装历史；发送POST并显示临时delta。",
+              "data": "页面内存，无localStorage",
+              "branch": "停止/清空/离开页面取消请求，旧请求不能污染新会话。"
+            },
+            {
+              "actor": "Python后端",
+              "action": "严格校验和简历检查后计入IP额度、获取4路并发、预占500次UTC日额度，再调用一次DeepSeek Responses。",
+              "data": "Redis只存HMAC计数，不存对话",
+              "branch": "配置/简历/Redis/额度不可用时不调用模型。"
+            },
+            {
+              "actor": "Vue前端",
+              "action": "仅done存完整问答；记录在约三轮高度内滚动查看，error或断流清除草稿并保留问题。",
+              "data": "默认JSON；网页使用SSE",
+              "branch": "无自动重试。"
+            }
+          ],
+          "module_ids": [
+            "resume-assistant-service"
+          ],
+          "api_ids": [
+            "resume-chat-api"
+          ],
+          "sources": [
+            {
+              "id": "resume-ui",
+              "symbol": "async function send()",
+              "line": 165
+            },
+            {
+              "id": "resume-client",
+              "symbol": "export async function requestResumeAnswer",
+              "line": 111
+            },
+            {
+              "id": "resume-api",
+              "symbol": "def create_app(",
+              "line": 164
+            }
+          ],
+          "implementation_status": "源码已核对；真实模型待配置"
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "name": "联系我",
+      "route": "#contact",
+      "purpose": "通过交互肖像认识石耳，并选择实际联系方式。",
+      "features": [
+        {
+          "id": "contact-portrait",
+          "name": "正脸区域与连续目光跟随",
+          "trigger": "进入联系页；鼠标横移或触屏横拖",
+          "input": "视频、海报、鼠标/手指屏幕X与视口宽度",
+          "output": "严格45%～50%固定正视，区间外连续转头；不延伸到眼睛位置",
+          "flow": [
+            {
+              "actor": "浏览器前端",
+              "action": "浏览器加载本地海报与视频；加载前海报可见。",
+              "data": "",
+              "branch": ""
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "读取视口宽度，计算45%与50%两条边界。",
+              "data": "与人物所在位置无关",
+              "branch": "失败时保留海报与联系入口。"
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "区间内固定正面帧；区间外相对边界的偏移归一化得到连续角度。",
+              "data": "区域内0，左/右区外-1～0 / 0～1；同目标收敛后不重启动画",
+              "branch": ""
+            }
+          ],
+          "module_ids": [
+            "portrait"
+          ],
+          "api_ids": [
+            "media"
+          ],
+          "sources": [
+            {
+              "id": "contact",
+              "symbol": "function lookAtPointer",
+              "line": 148
+            },
+            {
+              "id": "contact",
+              "symbol": "class=\"portrait-stage\"",
+              "line": 264
+            }
+          ],
+          "implementation_status": "源码已核对"
+        },
+        {
+          "id": "contact-text-pressure",
+          "name": "标题逐字压力动效",
+          "trigger": "进入联系页；指针靠近/离开，点击或轻触标题",
+          "input": "标题文字、本地可变字体、指针坐标、可见状态、减少动态效果偏好",
+          "output": "逐字宽度/字重/倾斜，空闲波浪和点击波纹；完整h1可访问名称",
+          "flow": [
+            {
+              "actor": "浏览器前端",
+              "action": "挂载Vue组件并加载本地Roboto Flex；字体成功后启用动态。",
+              "data": "完整文字由父h1提供可访问名称",
+              "branch": "字体失败保留静态回退文字"
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "按指针距离计算每字压力，与空闲wave及点击外扩ripple合成；批量更新字体轴。",
+              "data": "wdth/wght/slnt；无透明度或描边效果",
+              "branch": "减少动态效果时静态"
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "按最大字宽缩放适配；离屏、文档隐藏、菜单打开暂停，卸载释放资源。",
+              "data": "不改变肖像45%～50%区间",
+              "branch": ""
+            }
+          ],
+          "module_ids": [
+            "title-pressure"
+          ],
+          "api_ids": [
+            "pressure-font"
+          ],
+          "sources": [
+            {
+              "id": "pressure",
+              "symbol": "function tick",
+              "line": 97
+            },
+            {
+              "id": "pressure",
+              "symbol": "function fitTitle",
+              "line": 72
+            },
+            {
+              "id": "pressure",
+              "symbol": "function updateActivity",
+              "line": 62
+            }
+          ],
+          "implementation_status": "源码已核对"
+        },
+        {
+          "id": "contact-intro",
+          "name": "阅读介绍与使用操作区",
+          "trigger": "挂载联系页或修改减少动态效果偏好",
+          "input": "固定介绍：我是石耳，一个热爱技术与分享的硬地骇客（Indie Hacker)，来和我聊聊吧～；系统偏好",
+          "output": "完整可访问介绍、独立显示的联系按钮",
+          "flow": [
+            {
+              "actor": "浏览器前端",
+              "action": "正文身份眉题移除；本地Allura字体显示两行灰雾手写背景英文「Our story / is just beginning.」。",
+              "data": "仅装饰，aria-hidden、pointer-events:none；桌面58～82px、手机36～46px",
+              "branch": "字体失败使用本机手写字体回退。"
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "按钮400ms显示；介绍600ms开始，每38ms增加字符。",
+              "data": "",
+              "branch": ""
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "减少动态效果时立即显示全部内容。",
+              "data": "",
+              "branch": "无后端参与。"
+            }
+          ],
+          "module_ids": [
+            "reveal"
+          ],
+          "api_ids": [],
+          "sources": [
+            {
+              "id": "contact",
+              "symbol": "const introduction",
+              "line": 10
+            },
+            {
+              "id": "contact",
+              "symbol": "onMounted(() =>",
+              "line": 241
+            },
+            {
+              "id": "contact",
+              "symbol": "class=\"intro-ghost\"",
+              "line": 284
+            }
+          ],
+          "implementation_status": "源码已核对"
+        },
+        {
+          "id": "contact-actions",
+          "name": "查看关于我、复制、访问GitHub",
+          "trigger": "点击对应胶囊或邮箱按钮",
+          "input": "站内#resume、真实邮箱、微信、GitHub URL",
+          "output": "关于我页面 / 剪贴板内容 / GitHub新页",
+          "flow": [
+            {
+              "actor": "浏览器前端",
+              "action": "聊聊项目调用navigate('resume')跳转关于我；GitHub在新页打开并带noopener noreferrer。",
+              "data": "",
+              "branch": ""
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "复制操作等待浏览器API实际完成。",
+              "data": "邮箱或微信",
+              "branch": "失败给可手选原文；不会发送邮件或微信消息。"
+            }
+          ],
+          "module_ids": [
+            "clipboard",
+            "navigation"
+          ],
+          "api_ids": [
+            "copy-api",
+            "github-api"
+          ],
+          "sources": [
+            {
+              "id": "contact",
+              "symbol": "async function copyContact",
+              "line": 189
+            },
+            {
+              "id": "contact",
+              "symbol": "class=\"contact-actions\"",
+              "line": 292
+            }
+          ],
+          "implementation_status": "源码已核对"
+        },
+        {
+          "id": "contact-menu",
+          "name": "手机菜单与返回页面",
+          "trigger": "点击菜单、Tab、Escape、旋转/扩宽窗口",
+          "input": "菜单状态、按键、窗口宽度",
+          "output": "可键盘使用的导航与恢复焦点",
+          "flow": [
+            {
+              "actor": "浏览器前端",
+              "action": "打开弹层，背景 inert，焦点进入菜单。",
+              "data": "",
+              "branch": ""
+            },
+            {
+              "actor": "浏览器前端",
+              "action": "选择页面发送事件给 App。",
+              "data": "",
+              "branch": "Escape 关闭；超过900px关闭并聚焦品牌链接。"
+            }
+          ],
+          "module_ids": [
+            "mobile-menu",
+            "navigation"
+          ],
+          "api_ids": [],
+          "sources": [
+            {
+              "id": "contact",
+              "symbol": "async function openMenu",
+              "line": 205
+            },
+            {
+              "id": "contact",
+              "symbol": "function onResize",
+              "line": 216
+            }
+          ],
+          "implementation_status": "源码已核对"
+        }
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "navigation",
+      "name": "共享导航与转场",
+      "kind": "普通前端函数 / Vue 组件",
+      "responsibility": "统一三页面导航与生命周期",
+      "input": "home / resume / contact 哈希或导航事件",
+      "output": "互斥页面与转场状态",
+      "algorithm": {
+        "subject": "页面哈希与互斥视图",
+        "steps": [
+          "读取 location.hash；contact / resume 之外的值归为 home。",
+          "站内导航先 pushState 写入目标哈希，再取消旧转场 RAF、切页与完成计时器。",
+          "普通模式启动随机扫描转场，到切换时刻设置 showContact / showResume；hashchange 立即同步视图。",
+          "App 卸载取消计时器和 RAF，移除 hashchange；PageTransition 卸载移除 resize 并释放 ctx、粒子。"
+        ],
+        "branches": [
+          "prefers-reduced-motion 时直接切页。",
+          "快速重复导航只保留最后一次切换；历史返回/前进通过 hashchange 同步。"
+        ],
+        "parameters": [
+          {
+            "key": "scanSegments",
+            "value": "250–400 / 300–500 / 300–600 / 250–400 ms",
+            "value_kind": "源码默认值",
+            "location": "App.vue: playTransition",
+            "impact": "随机段长决定扫描长度。"
+          },
+          {
+            "key": "totalDuration",
+            "value": "600 + 四段之和，单位 ms",
+            "value_kind": "源码默认值",
+            "location": "App.vue: playTransition",
+            "impact": "总动画时间；切页发生于 300+s1+s2+0.6*s3。"
+          },
+          {
+            "key": "finish delay",
+            "value": "100 ms",
+            "value_kind": "源码默认值",
+            "location": "App.vue: animate",
+            "impact": "进度到1后隐藏转场。"
+          }
+        ],
+        "selection": "最后一次导航目标生效；三页面只挂载一个。",
+        "failures": [
+          "未知 hash 回退首页；无服务端请求。"
+        ],
+        "sources": [
+          {
+            "id": "app",
+            "symbol": "const pageFromHash",
+            "line": 10
+          },
+          {
+            "id": "app",
+            "symbol": "const playTransition",
+            "line": 40
+          },
+          {
+            "id": "transition",
+            "symbol": "onUnmounted(() =>",
+            "line": 361
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "app",
+          "symbol": "const pageFromHash",
+          "line": 10
+        },
+        {
+          "id": "app",
+          "symbol": "const playTransition",
+          "line": 40
+        },
+        {
+          "id": "transition",
+          "symbol": "onUnmounted(() =>",
+          "line": 361
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "portrait",
+      "name": "连续朝向与视频定位",
+      "kind": "普通前端函数 / Vue 组件",
+      "responsibility": "把固定正脸区与指针在两侧的距离映射为连续角度",
+      "input": "PointerEvent / 媒体事件",
+      "output": "HTMLVideoElement.currentTime",
+      "algorithm": {
+        "subject": "目标朝向与对应视频时间",
+        "steps": [
+          "prepare-contact-gaze.sh将原片24fps连续帧8～30倒序（保留自然眨眼），接右侧帧65～78；OBMC插值60fps，全I帧编码。保留连续原生回正动作，避免跨姿态拼接带来的重影；原始视频保留。",
+          "loadedmetadata获取有限duration，定位正面120/60秒；首次定位完成后才显示video，保持paused、muted、playsinline，无autoplay。",
+          "读取window.innerWidth，frontZone={left:0.45,right:0.5}；以视口比例确定边界，不再计算眼睛位置。",
+          "lookAtPointer在45%～50%内设目标0，区外按距该侧边界的剩余距离归一化。反向即回正，35ms平滑，收敛后同目标直接返回。",
+          "timeForGaze分别线性映射左10/60→正120/60→右190/60秒；0处连续。",
+          "setTime量化到60fps帧格并加0.0001秒，限制0…duration-1/60；半帧以内不重复seek，只保留一个在途seek，seeked接最新目标，无额外seek RAF。"
+        ],
+        "branches": [
+          "鼠标首次进入即可按位置更新；菜单打开时不自动跟随。普通链接/按钮上的鼠标仍按所在侧看，不影响点击。",
+          "触屏仅在人物区域按下后工作：横向达到6px开始控制；纵向先超过6px且大于横移时退出，保留滚动。",
+          "减少动态效果禁用鼠标跟随，触屏显式控制仍可用且直接定位、不缓动。",
+          "resize按视口百分比重算边界并更新仍在页面内的鼠标位置，离开页面清空lastMouseX；触屏纵向滚动规则保持。"
+        ],
+        "parameters": [
+          {
+            "key": "gaze frames",
+            "value": "left=10/60s, front=120/60s, right=190/60s",
+            "value_kind": "按现有素材逐帧标定的源码默认值",
+            "location": "ContactPortrait.vue: gazeFrames",
+            "impact": "单调素材两段映射在正面连续；更换视频须重新标定。"
+          },
+          {
+            "key": "smoothing",
+            "value": "时间常数35ms；dt上限50ms；吸附误差0.001",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: animateGaze",
+            "impact": "短缓动过滤输入突变，反向即跟随，不自动完成整段转头。"
+          },
+          {
+            "key": "last-frame margin",
+            "value": "1/60 s",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: maximumTime",
+            "impact": "避免 seek 到媒体终点。"
+          },
+          {
+            "key": "convergence tolerance",
+            "value": "0.5/60 s（半帧）",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: flushSeek",
+            "impact": "目标差小于此值时不发起重复 seek。"
+          },
+          {
+            "key": "touch threshold",
+            "value": "6 px",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: onPointerMove",
+            "impact": "区分横拖与纵向页面滚动。"
+          },
+          {
+            "key": "pointer normalization",
+            "value": "left=0.45×width；right=0.5×width",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: frontZone / lookAtPointer",
+            "impact": "仅5%视口宽保持正面；移出区域即连续转头，区域内不产生新seek。"
+          },
+          {
+            "key": "video preparation",
+            "value": "60fps、196帧、3.266667s、1254×720、全I帧、无音轨",
+            "value_kind": "生成素材参数",
+            "location": "scripts/prepare-contact-gaze.sh",
+            "impact": "单调角度和独立可解码帧减少正面跳跃及随机定位成本。"
+          }
+        ],
+        "selection": "45%～50%固定0正面；左于45%连续左转，右于50%连续右转；不延伸至眼睛。",
+        "failures": [
+          "元数据未就绪不 seek；加载失败隐藏 video、保留 img 海报与联系入口。",
+          "卸载或媒体错误取消朝向RAF；错误后停止seek并保留海报；未调用play()。"
+        ],
+        "sources": [
+          {
+            "id": "contact",
+            "symbol": "function flushSeek",
+            "line": 71
+          },
+          {
+            "id": "contact",
+            "symbol": "function onMediaError",
+            "line": 98
+          },
+          {
+            "id": "contact",
+            "symbol": "function onPointerMove",
+            "line": 168
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "contact",
+          "symbol": "function flushSeek",
+          "line": 71
+        },
+        {
+          "id": "contact",
+          "symbol": "function onMediaError",
+          "line": 98
+        },
+        {
+          "id": "contact",
+          "symbol": "function onPointerMove",
+          "line": 168
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "reveal",
+      "name": "文案与操作区呈现",
+      "kind": "普通前端函数 / Vue 组件",
+      "responsibility": "独立计时与减少动态效果",
+      "input": "挂载 / 媒体偏好变更",
+      "output": "可见文字数量与操作区状态",
+      "algorithm": {
+        "subject": "介绍文字与独立操作区",
+        "steps": [
+          "挂载分别安排按钮显示与第一字符计时器。",
+          "typeNextLetter每次增加1个字符串单元；displayIntroduction把Indie Hacker内部空格替换为U+00A0，打字与占位层同用不可拆分显示串，保留全文高度。",
+          "屏幕阅读器读取独立完整介绍；装饰和逐字层 aria-hidden。"
+        ],
+        "branches": [
+          "初始或运行中启用减少动态效果：取消计时器、立即显示全文与按钮，关闭光标动画。"
+        ],
+        "parameters": [
+          {
+            "key": "actions delay",
+            "value": "400 ms",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: onMounted",
+            "impact": "操作区不等待介绍打完。"
+          },
+          {
+            "key": "first character delay",
+            "value": "600 ms",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: onMounted",
+            "impact": "介绍第一字出现时刻。"
+          },
+          {
+            "key": "character interval",
+            "value": "38 ms",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: typeNextLetter",
+            "impact": "逐字显示间隔，受浏览器调度影响。"
+          }
+        ],
+        "selection": "两条独立计时链；全文以 introduction 常量为准。",
+        "failures": [
+          "卸载清除两个计时器；disposed 防止过期回调。"
+        ],
+        "sources": [
+          {
+            "id": "contact",
+            "symbol": "function typeNextLetter",
+            "line": 53
+          },
+          {
+            "id": "contact",
+            "symbol": "function updateMotionPreference",
+            "line": 59
+          },
+          {
+            "id": "contact",
+            "symbol": "onMounted(() =>",
+            "line": 241
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "contact",
+          "symbol": "function typeNextLetter",
+          "line": 53
+        },
+        {
+          "id": "contact",
+          "symbol": "function updateMotionPreference",
+          "line": 59
+        },
+        {
+          "id": "contact",
+          "symbol": "onMounted(() =>",
+          "line": 241
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "clipboard",
+      "name": "复制与异常反馈",
+      "kind": "普通前端函数 / Vue 组件",
+      "responsibility": "写入真实联系方式并回报实际结果",
+      "input": "text:string、label:string",
+      "output": "Promise结果 / 手动复制原文",
+      "algorithm": {
+        "subject": "真实邮箱与微信文字",
+        "steps": [
+          "点击后递增 copyRequest，并显示正在复制。",
+          "检查 navigator.clipboard.writeText 可用后等待 Promise。",
+          "只有最新请求且组件仍挂载才更新反馈。"
+        ],
+        "branches": [
+          "Promise resolve 才显示已复制。",
+          "API 缺失或 reject：显示失败提示和含原文的只读输入，聚焦全选。"
+        ],
+        "parameters": [
+          {
+            "key": "email",
+            "value": "rudrakshaishere@gmail.com",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: email",
+            "impact": "邮件收件地址与复制邮箱。"
+          },
+          {
+            "key": "wechat",
+            "value": "Ria_is_here",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: wechat",
+            "impact": "复制到剪贴板的微信号。"
+          }
+        ],
+        "selection": "最新复制请求的反馈覆盖此前请求；不通过假弹窗宣称成功。",
+        "failures": [
+          "权限拒绝、安全上下文限制或 API 缺失均进入手动复制；无后端。"
+        ],
+        "sources": [
+          {
+            "id": "contact",
+            "symbol": "async function copyContact",
+            "line": 189
+          },
+          {
+            "id": "contact",
+            "symbol": "const email",
+            "line": 8
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "contact",
+          "symbol": "async function copyContact",
+          "line": 189
+        },
+        {
+          "id": "contact",
+          "symbol": "const email",
+          "line": 8
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "mobile-menu",
+      "name": "移动菜单",
+      "kind": "普通前端函数 / Vue 组件",
+      "responsibility": "模态导航与焦点循环",
+      "input": "按钮、键盘、resize",
+      "output": "菜单显示状态与焦点",
+      "algorithm": {
+        "subject": "联系页移动导航与焦点",
+        "steps": [
+          "打开菜单后设置背景 inert，再 nextTick 聚焦关闭按钮。",
+          "Tab / Shift+Tab 在首末链接与关闭按钮之间循环。",
+          "关闭后 nextTick 恢复触发按钮焦点；导航点击发送 goHome / goResume 给 App。"
+        ],
+        "branches": [
+          "Escape 关闭。",
+          "窗口宽度超过900px时关闭菜单并聚焦 RIA 首页链接。"
+        ],
+        "parameters": [
+          {
+            "key": "mobile breakpoint",
+            "value": "900 px",
+            "value_kind": "源码默认值",
+            "location": "ContactPortrait.vue: onResize / @media",
+            "impact": "超过此宽度使用桌面导航，避免遗留弹层。"
+          }
+        ],
+        "selection": "同一时刻只保留一个菜单；背景不可交互。",
+        "failures": [
+          "卸载移除 resize 和媒体偏好监听。"
+        ],
+        "sources": [
+          {
+            "id": "contact",
+            "symbol": "async function openMenu",
+            "line": 205
+          },
+          {
+            "id": "contact",
+            "symbol": "function onMenuKeydown",
+            "line": 230
+          },
+          {
+            "id": "contact",
+            "symbol": "onUnmounted(() =>",
+            "line": 250
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "contact",
+          "symbol": "async function openMenu",
+          "line": 205
+        },
+        {
+          "id": "contact",
+          "symbol": "function onMenuKeydown",
+          "line": 230
+        },
+        {
+          "id": "contact",
+          "symbol": "onUnmounted(() =>",
+          "line": 250
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "title-pressure",
+      "name": "Vue TextPressure标题",
+      "kind": "普通前端Vue组件",
+      "responsibility": "移植用户提供的TextPressure效果并适配现站标题",
+      "input": "text / active props；PointerEvent；文档/字体/可见性事件",
+      "output": "逐字font-variation-settings及适配transform",
+      "algorithm": {
+        "subject": "每字的压力与可变字体轴",
+        "steps": [
+          "字体成功加载且active、可见、document未隐藏、非reduced-motion时才启动RAF。",
+          "fitTitle量测最大字体轴的完整字宽，仅在窄容器需要时缩放X，保留标题字号与行高。",
+          "tick批量读取字母中心与标题边界；指针位置以250ms时间常数平滑，标题内外以320ms混合鼠标压力与空闲wave。",
+          "逐字按1-distance/(span×radius)计算压力，叠加外扩衰减ripple，写入wght/wdth/slnt；仅变更值写样式。",
+          "离屏/隐藏/菜单暂停，减少动态效果重置静态；卸载取消RAF并断开observer及监听。"
+        ],
+        "branches": [
+          "原生PointerEvent同时支持鼠标与触摸，监听passive且不阻止纵向滚动。",
+          "字体加载失败保持静态回退；Promise完成后若已卸载则不再写入。",
+          "父h1提供完整名称；视觉拆字和量测内容aria-hidden。"
+        ],
+        "parameters": [
+          {
+            "key": "pressure range",
+            "value": "wght250～950；wdth80～135；slnt -10～0",
+            "value_kind": "源码默认值",
+            "location": "TextPressure.vue: tick",
+            "impact": "采用Roboto Flex有效轴，保留低压力时的可读性。"
+          },
+          {
+            "key": "radius / smoothing",
+            "value": "0.5 / 0.5",
+            "value_kind": "源码默认值",
+            "location": "TextPressure.vue: radius / smoothing",
+            "impact": "作用距离为标题宽一半；指针跟随时间常数1000×smoothing²=250ms。"
+          },
+          {
+            "key": "idle wave",
+            "value": "period=3.2s；idleSpeed=1",
+            "value_kind": "源码默认值",
+            "location": "TextPressure.vue: wavePeriod / idleSpeed",
+            "impact": "鼠标离开标题后持续波浪，混合过渡约320ms。"
+          },
+          {
+            "key": "ripple",
+            "value": "life=1300ms；最多6个；speed=span×1.25/s",
+            "value_kind": "源码默认值",
+            "location": "TextPressure.vue: ripplePressure / press",
+            "impact": "点击向外扩散并衰减，带宽max(span×0.14,32px)。"
+          },
+          {
+            "key": "static fallback",
+            "value": "wght500、wdth100、slnt0",
+            "value_kind": "源码默认值",
+            "location": "TextPressure.vue: staticAxes / resetLetters",
+            "impact": "减少动态效果或字体未就绪时稳定可读。"
+          }
+        ],
+        "selection": "可见且可动时合成鼠标/空闲/点击压力，否则静态或暂停；原肖像逻辑独立。",
+        "failures": [
+          "字体失败保留完整标题，不运行无效动画。",
+          "卸载释放窗口/文档监听、IntersectionObserver、ResizeObserver、RAF。"
+        ],
+        "sources": [
+          {
+            "id": "pressure",
+            "symbol": "function tick",
+            "line": 97
+          },
+          {
+            "id": "pressure",
+            "symbol": "function fitTitle",
+            "line": 72
+          },
+          {
+            "id": "pressure",
+            "symbol": "function updateActivity",
+            "line": 62
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "pressure",
+          "symbol": "function tick",
+          "line": 97
+        },
+        {
+          "id": "pressure",
+          "symbol": "function fitTitle",
+          "line": 72
+        },
+        {
+          "id": "pressure",
+          "symbol": "function updateActivity",
+          "line": 62
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "resume-assistant-service",
+      "name": "公开简历问答与额度控制",
+      "kind": "Vue组件 / FastAPI / DeepSeek Responses（AsyncOpenAI SDK）/ Redis Lua",
+      "responsibility": "以固定公开简历辅助回答，限制请求费用并控制流式生命周期",
+      "input": "严格question/history；服务端配置及启动时内存简历",
+      "output": "JSON或SSE delta/done/error；安全运行日志",
+      "algorithm": {
+        "subject": "校验、限流和单次模型调用",
+        "steps": [
+          "实际累计HTTP正文限制49152字节，严格UTF8/JSON/Pydantic字段及码点长度。",
+          "简历有效后Redis原子计入每IP5/min、50/day；本地4路并发不排队；原子预占全站500/day不退款。",
+          "固定instructions与独立JSON简历输入，固定DeepSeek地址，reasoning.effort=none、store=false、max_output_tokens=1500，SDK/业务无重试。",
+          "模型整体30秒、请求整体35秒；成功必须completed且纯文本1～2000码点；断连尽力取消并释放许可。",
+          "固定提示词将本站昵称石耳对应到陈科瑾，人物事实仍以同一份公开简历为依据。"
+        ],
+        "branches": [
+          "缺真实简历或Redis不可用拒绝模型调用。",
+          "SSE临时文本不是已完成答案，最终无效时前端清除。",
+          "真实账户状态和事实准确性须单独人工评测。"
+        ],
+        "parameters": [],
+        "selection": "用户请求不能指定模型、Key、系统规则或简历路径。",
+        "failures": [
+          "统一UUID错误对象，不输出原始输入和异常。"
+        ],
+        "sources": [
+          {
+            "id": "resume-ui",
+            "symbol": "async function send()",
+            "line": 165
+          },
+          {
+            "id": "resume-client",
+            "symbol": "export async function requestResumeAnswer",
+            "line": 111
+          },
+          {
+            "id": "resume-api",
+            "symbol": "def create_app(",
+            "line": 164
+          },
+          {
+            "id": "resume-prompt",
+            "symbol": "称呼对应：",
+            "line": 4
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "resume-ui",
+          "symbol": "async function send()",
+          "line": 165
+        },
+        {
+          "id": "resume-client",
+          "symbol": "export async function requestResumeAnswer",
+          "line": 111
+        },
+        {
+          "id": "resume-api",
+          "symbol": "def create_app(",
+          "line": 164
+        },
+        {
+          "id": "resume-prompt",
+          "symbol": "称呼对应：",
+          "line": 4
+        }
+      ],
+      "implementation_status": "源码已核对；真实上游未运行"
+    }
+  ],
+  "apis": [
+    {
+      "id": "media",
+      "name": "本地媒体读取",
+      "method": "GET（浏览器资源请求）",
+      "url": "src/assets/contact-gaze.mp4 / contact-portrait-poster.jpg；Vite构建后生成带指纹URL",
+      "request": "路径:string；浏览器可携带 Range:string；无业务 JSON 请求体。",
+      "response": "video/mp4 或 image/jpeg 二进制文件；服务器可能返回200或206，失败触发媒体 error。",
+      "algorithm": "加载元数据后读取 duration:number；seek 控制见肖像模块。",
+      "module_ids": [
+        "portrait"
+      ],
+      "sources": [
+        {
+          "id": "contact",
+          "symbol": "import portraitVideo",
+          "line": 4
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "copy-api",
+      "name": "剪贴板 API",
+      "method": "navigator.clipboard.writeText(text)",
+      "url": "无 HTTP URL（浏览器原生 API）",
+      "request": "text:string，位置：函数参数；值为邮箱或微信号。",
+      "response": "Promise<void>；resolve 表示写入完成，reject 为浏览器异常，无 JSON/SSE。",
+      "algorithm": "只接受最新请求结果，失败提供手动复制。",
+      "module_ids": [
+        "clipboard"
+      ],
+      "sources": [
+        {
+          "id": "contact",
+          "symbol": "async function copyContact",
+          "line": 189
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "github-api",
+      "name": "GitHub 主页导航",
+      "method": "浏览器新页导航",
+      "url": "https://github.com/RiaHello",
+      "request": "URL:string；target=_blank，rel=noopener noreferrer。",
+      "response": "GitHub网页由外站响应；本站无 JSON 接口或响应解析。",
+      "algorithm": "原生 a 元素链接。",
+      "module_ids": [],
+      "sources": [
+        {
+          "id": "contact",
+          "symbol": "class=\"contact-actions\"",
+          "line": 292
+        }
+      ],
+      "implementation_status": "源码已核对"
+    },
+    {
+      "id": "pressure-font",
+      "name": "标题本地可变字体",
+      "method": "GET（浏览器静态资源）",
+      "url": "src/assets/fonts/RobotoFlex-Latin.woff2；Vite构建后为带指纹URL",
+      "request": "URL:string；无业务数据或凭据",
+      "response": "WOFF2字体，250160字节；加载失败使用系统回退",
+      "algorithm": "@font-face声明本地字体，document.fonts.load就绪后启用动画；字体及源码许可保留在public/licenses。",
+      "module_ids": [
+        "title-pressure"
+      ],
+      "sources": [
+        {
+          "id": "pressure",
+          "symbol": "  font-family: 'Contact Roboto Flex';",
+          "line": 249
+        }
+      ]
+    },
+    {
+      "id": "resume-chat-api",
+      "name": "公开简历问答API",
+      "method": "POST",
+      "url": "/api/v1/resume/chat",
+      "request": "application/json: question:string 1–1000码点，history:0/2/4/6交替消息、总6000码点；正文48KiB。",
+      "response": "默认JSON {request_id,answer}；Accept:text/event-stream使用delta/done/error，所有响应X-Request-ID/no-store。",
+      "algorithm": "详见backend/README.md字段、错误码、健康检查及部署说明；真实简历和Key必须由站点主人提供。",
+      "module_ids": [
+        "resume-assistant-service"
+      ],
+      "sources": [
+        {
+          "id": "resume-ui",
+          "symbol": "async function send()",
+          "line": 165
+        },
+        {
+          "id": "resume-client",
+          "symbol": "export async function requestResumeAnswer",
+          "line": 111
+        },
+        {
+          "id": "resume-api",
+          "symbol": "def create_app(",
+          "line": 164
+        }
+      ],
+      "implementation_status": "离线独立验证通过；真实模型未运行"
+    }
+  ]
+}

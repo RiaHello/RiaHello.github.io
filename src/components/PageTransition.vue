@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 
 const props = defineProps<{
   show: boolean;
@@ -9,6 +9,7 @@ const props = defineProps<{
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let ctx: CanvasRenderingContext2D | null = null;
 let frameCount = 0;
+let resizeHandler: (() => void) | null = null;
 
 interface Particle {
   x: number;
@@ -352,8 +353,16 @@ onMounted(() => {
   };
   resize();
   window.addEventListener('resize', resize);
+  resizeHandler = resize;
 
   drawTransition(props.progress);
+});
+
+onUnmounted(() => {
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+  resizeHandler = null;
+  ctx = null;
+  particles = [];
 });
 
 watch(() => props.progress, (newProgress) => {

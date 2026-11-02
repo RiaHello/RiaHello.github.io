@@ -1,0 +1,20 @@
+TextPressure title adaptation
+
+The Vue component adapts the TextPressure source supplied by the site owner,
+from React Bits (David Haz): https://github.com/DavidHDev/react-bits
+Upstream license: React-Bits-LICENSE.md (retained in full).
+The supplied source credits Juan Fuentes:
+https://codepen.io/JuanFuentes/full/rgXKGQ
+
+Font: Roboto Flex, The Roboto Flex Project Authors.
+Font license: RobotoFlex-OFL.txt (SIL Open Font License 1.1).
+Source: https://github.com/google/fonts/tree/main/ofl/robotoflex
+The Latin WOFF2 subset was downloaded from the Google Fonts CSS API with
+opsz 8..144, slnt -10..0, wdth 25..151, wght 100..1000.
+The title uses local assets and makes no runtime font request to Google.
+
+TextType input hint adaptation
+
+ResumeAssistant.vue also adapts the site owner supplied React Bits TextType
+typing/fade/backspace/cursor behavior to Vue. The same React Bits license
+above applies; the source React component itself is not required at runtime.
